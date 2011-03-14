@@ -26,8 +26,6 @@
  */
 class ZendX_Sencha_Application_Resource_Frontcontroller extends Zend_Application_Resource_Frontcontroller
 {
-	protected static $_instance;
-
     /**
      * Retrieve front controller instance
      *
@@ -35,22 +33,24 @@ class ZendX_Sencha_Application_Resource_Frontcontroller extends Zend_Application
      */
     public function getFrontController()
     {
-        if (null === $this->_front) {
-			$this->_front = Zend_Controller_Front::getInstance();
-			
-			$request = new ZendX_Sencha_Direct_Request();
-			if ($request->isXmlHttpRequest()) {			
-				$this->_front->setRouter(new ZendX_Sencha_Direct_Router())
-					->setDispatcher(new ZendX_Sencha_Direct_Dispatcher())
-					->setResponse(new ZendX_Sencha_Direct_Response())
-					->setRequest($request);
-				
-				// Override configs that must be overridden.
-				$this->_front->throwExceptions(false);
-				$this->_front->setParam('noErrorHandler', true);
-				$this->_front->setParam('noViewRenderer', true);
-			}
-        }
-        return $this->_front;
+    	if (null === $this->_front){
+    		$this->_front = Zend_Controller_Front::getInstance();
+    		$request = new ZendX_Sencha_Direct_Request();
+    		if ($request->isXmlHttpRequest()){
+    			if (!($this->_front->getRequest() instanceof ZendX_Sencha_Direct_Request)){
+    				$this->_front->setRequest($request);
+    			}
+    			if (!($this->_front->getRouter() instanceof ZendX_Sencha_Direct_Router)){
+	    			$this->_front->setRouter(new ZendX_Sencha_Direct_Router());
+    			}
+    			if (!($this->_front->getDispatcher() instanceof ZendX_Sencha_Direct_Dispatcher)){
+    				$this->_front->setDispatcher(new ZendX_Sencha_Direct_Dispatcher());
+    			}
+    			if (!($this->_front->getResponse() instanceof ZendX_Sencha_Direct_Response)){
+    				$this->_front->setResponse(new ZendX_Sencha_Direct_Response());
+    			}
+    		}
+    	}
+    	return $this->_front;
     }
 }
