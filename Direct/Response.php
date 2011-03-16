@@ -26,6 +26,8 @@
  */
 class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
 {
+	const DIRECT = 'direct';
+
     /**
      * Append content to the body content
      *
@@ -35,10 +37,10 @@ class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
      */
     public function appendBody($content, $name = null)
     {
-    	if (!isset($this->_body['json'])){
-    		$this->_body['json'] = array();
+    	if (!isset($this->_body[self::DIRECT])){
+    		$this->_body[self::DIRECT] = array();
     	}
-    	$this->_body['json'][] = $content;
+    	$this->_body[self::DIRECT][] = $content;
         return $this;
     }
     
@@ -60,6 +62,67 @@ class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
     	parent::setException($e);
     }
 
+	/**
+	 * formatJson function.
+	 * This code was swiped from: http://recursive-design.com/blog/2008/03/11/format-json-with-php/
+	 * thanks!
+	 *
+	 * @author Recursive Design (http://recursive-design.com/)
+	 * @access public
+	 * @param mixed $json
+	 * @return void
+	 */
+	public static function formatJson($json)
+	{
+	    $result      = '';
+	    $pos         = 0;
+	    $strLen      = strlen($json);
+	    $indentStr   = '  ';
+	    $newLine     = "\n";
+	    $prevChar    = '';
+	    $outOfQuotes = true;
+	
+	    for ($i=0; $i<=$strLen; $i++) {
+	
+	        // Grab the next character in the string.
+	        $char = substr($json, $i, 1);
+	
+	        // Are we inside a quoted string?
+	        if ($char == '"' && $prevChar != '\\') {
+	            $outOfQuotes = !$outOfQuotes;
+	        
+	        // If this character is the end of an element, 
+	        // output a new line and indent the next line.
+	        } else if(($char == '}' || $char == ']') && $outOfQuotes) {
+	            $result .= $newLine;
+	            $pos --;
+	            for ($j=0; $j<$pos; $j++) {
+	                $result .= $indentStr;
+	            }
+	        }
+	        
+	        // Add the character to the result string.
+	        $result .= $char;
+	
+	        // If the last character was the beginning of an element, 
+	        // output a new line and indent the next line.
+	        if (($char == ',' || $char == '{' || $char == '[') && $outOfQuotes) {
+	            $result .= $newLine;
+	            if ($char == '{' || $char == '[') {
+	                $pos ++;
+	            }
+	            
+	            for ($j = 0; $j < $pos; $j++) {
+	                $result .= $indentStr;
+	            }
+	        }
+	        
+	        $prevChar = $char;
+	    }
+	
+	    return $result;
+	}
+
     /**
      * sendResponse function.
      * 
@@ -70,47 +133,43 @@ class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
     {
     	$request = Zend_Controller_Front::getInstance()->getRequest();
         $this->sendHeaders();
-
+        
 		$data = array();
-
-        if ($this->isException()) {
-            $exceptions = array();
-            foreach ($this->getException() as $e) {
+		// Add any exceptions to the response
+		if ($this->isException()) { // more like 'has' exception..
+			$formatter = ZendX_Sencha_Formatter::getFormatter('exception');
+			foreach ($this->getException() as $e){
             	if ($e instanceof ZendX_Sencha_Direct_Exception){
-					$exception = array(
-						'type'		=> 'exception',
-						'tid'		=> $e->getTid(),
-						'message'	=> $e->getMessage(),
-						'where'		=> $e->getTrace()
-	            	);
-		            if ($request->isBatchRequest()){
-		            	array_push($data, $exception);
-		            } else {
-		            	$data = $exception;
-		            	break;
-		            }
-	            } else {
-	            	throw $e; // what else can I do?
-	            }
-            }
-        }
-
-		// Unline regular responses, the result can contain both exceptions
-		// and good data.
-		if (isset($this->_body['json']) && is_array($this->_body['json'])){
-			foreach ($this->_body['json'] as $resp){
-				if ($request->isBatchRequest()){
-					array_push($data, $resp);
+					if ($request->isBatchRequest()) {
+						array_push($data, $formatter->format($e));
+					} else {
+						$data = $formatter->format($e);
+					}
 				} else {
-					$data = $resp;
-					break;
+					throw $e;
 				}
 			}
 		}
 
+		// Add successful results to the response
+		if (isset($this->_body[self::DIRECT]) && is_array($this->_body[self::DIRECT])) {
+			foreach ($this->_body[self::DIRECT] as $resp) {
+				if ($request->isBatchRequest()){
+					array_push($data, $resp);
+				} else {
+					$data = $resp;
+				}
+			}
+		}
+		
+		// Output the json string to the browser.
 		$json = Zend_Json::encode($data);
-		// formatting this mainly for debugging..
-		$formatter = new ZendX_Sencha_Direct_Response_Formatter_Indent();
-		echo $formatter->format($json);    		
+
+        // TODO make this a config parameter
+		if (true){
+			echo self::formatJson($json);
+		} else {
+			echo $json;
+		}
     }
 }

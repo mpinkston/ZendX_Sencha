@@ -67,7 +67,7 @@ class ZendX_Sencha_Direct_Dispatcher extends Zend_Controller_Dispatcher_Standard
 		$api = $this->getApi();
 		$api->setNamespace($moduleName);
 		$classConfig = $api->getClass($controllerName);
-		
+
 		if (!is_array($classConfig)){
 			throw new ZendX_Sencha_Direct_Exception($request->getTid(), 'Invalid namespace requested');
 		}			

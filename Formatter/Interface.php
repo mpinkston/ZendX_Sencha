@@ -20,10 +20,16 @@
  */
 
 /**
- * ZendX_Sencha_Direct_Response_Formatter class.
- * 
- * @extends ZendX_Sencha_Direct_Response_Formatter_Abstract
+ * ZendX_Sencha_Formatter_Interface interface.
  */
-class ZendX_Sencha_Direct_Response_Formatter extends ZendX_Sencha_Direct_Response_Formatter_Abstract
+interface ZendX_Sencha_Formatter_Interface
 {
+	/**
+	 * format function.
+	 * 
+	 * @access public
+	 * @param mixed $data
+	 * @return void
+	 */
+	public function format($data);
 }

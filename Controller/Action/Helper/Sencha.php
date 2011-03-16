@@ -19,6 +19,11 @@
  * @license    http://www.ics-llc.net/license/new-bsd  New BSD License
  */
 
+/**
+ * ZendX_Sencha_Controller_Action_Helper_Sencha class.
+ * 
+ * @extends Zend_Controller_Action_Helper_Abstract
+ */
 class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Action_Helper_Abstract
 {
 	// The default version of the ExtJs library

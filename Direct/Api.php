@@ -22,6 +22,7 @@
 /**
  * ZendX_Sencha_Direct_Api class.
  * This class generates the configuration for Ext.Direct.addProvider
+ * It exclusively uses the docbloc to configure the provider.
  * 
  */
 class ZendX_Sencha_Direct_Api
@@ -51,6 +52,10 @@ class ZendX_Sencha_Direct_Api
 	// Can be used in the docblock of a class or a method to 
 	// modify its name as it appears to the rpc client.
 	const NAME_ATTR		= 'remoteName';
+	
+	// This is a standard docblock attribute.
+	const PARAM_ATTR	= 'param';
+	
 	
 	/**
 	 * _session
@@ -256,11 +261,12 @@ class ZendX_Sencha_Direct_Api
 			$mDoc = $cMethod->getDocBlock();
 			if (!$mDoc->hasTag('remotable')){ continue; }
 			$mTag = $mDoc->getTag(self::NAME_ATTR);
+			$pTags = $mDoc->getTags(self::PARAM_ATTR);
 			$mName = $mTag?trim($mTag->getDescription()):$cMethod->name;
 
 			$classConfig['methods'][$mName] = array(
 				'methodName'	=> $cMethod->name,
-				'length'		=> count($cMethod->getParameters()),
+				'length'		=> count($pTags),
 				'formHandler'	=> $mDoc->hasTag(self::FORM_ATTR)
 			);
 		}

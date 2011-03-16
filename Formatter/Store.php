@@ -20,9 +20,30 @@
  */
 
 /**
- * ZendX_Sencha_Direct_Response_Formatter_Abstract class.
+ * ZendX_Sencha_Formatter_Store class.
  * 
  */
-class ZendX_Sencha_Direct_Response_Formatter_Abstract
+class ZendX_Sencha_Formatter_Store
 {
+	/**
+	 * format function.
+	 * 
+	 * @access public
+	 * @param mixed $data
+	 * @return void
+	 */
+	public function format($data)
+	{
+		if ($data instanceof Zend_Paginator) {
+			$reader = new ZendX_Sencha_Formatter_Store_Paginator();
+		} else if ($data instanceof Zend_Db_Table_Rowset) {
+			$reader = new ZendX_Sencha_Formatter_Store_Rowset();
+		} else if (is_array($data)) {
+			$reader = new ZendX_Sencha_Formatter_Store_Array();
+		} else {
+			throw new Zend_Exception('Could not find appropriate reader for data');
+		}
+
+		return $reader->format($data);
+	}
 }

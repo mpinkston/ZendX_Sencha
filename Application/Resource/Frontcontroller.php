@@ -35,8 +35,10 @@ class ZendX_Sencha_Application_Resource_Frontcontroller extends Zend_Application
     {
     	if (null === $this->_front){
     		$this->_front = Zend_Controller_Front::getInstance();
-    		$request = new ZendX_Sencha_Direct_Request();
+			$request = new ZendX_Sencha_Direct_Request();
     		if ($request->isXmlHttpRequest()){
+
+    			// Configure the front controller
     			if (!($this->_front->getRequest() instanceof ZendX_Sencha_Direct_Request)){
     				$this->_front->setRequest($request);
     			}
@@ -49,6 +51,9 @@ class ZendX_Sencha_Application_Resource_Frontcontroller extends Zend_Application
     			if (!($this->_front->getResponse() instanceof ZendX_Sencha_Direct_Response)){
     				$this->_front->setResponse(new ZendX_Sencha_Direct_Response());
     			}
+	            $this->_front->throwExceptions(false);
+	            $this->_front->setParam('noErrorHandler', true);
+	            $this->_front->setParam('noViewRenderer', true);
     		}
     	}
     	return $this->_front;

@@ -148,6 +148,9 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 		$controller = $data['action'];
 		$action = $data['method'];
 		$params = is_array($data['data'])?$data['data']:array();
+		if (count($params) && is_int(key($params))){
+			$params = array_shift($params);
+		}
 		
 		if ($this->_request->isBatchRequest() && $this->_initialRequestRouted) {
 	        $request = clone $this->_request;
