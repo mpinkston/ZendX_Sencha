@@ -115,7 +115,7 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 			throw new Zend_Controller_Router_Exception('Invalid Request');
 		}
 		
-		if ('application/json' == $request->getHeader('Content-Type')) {
+		if (strstr($request->getHeader('Content-Type'), 'application/json') !== false) {
 			$data = Zend_Json::decode($request->getRawBody(), Zend_Json::TYPE_ARRAY);
 			$this->_parseArray($data);
 		} else {
