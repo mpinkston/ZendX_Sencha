@@ -190,10 +190,14 @@ class ZendX_Sencha_Direct_Api
 		$ns = $this->getNamespace();
 		$classes = self::$_session->$ns;
 		if (is_array($classes)){
-			foreach($classes as $class => $config) {
-				if ($config['className'] == $className &&
-					is_readable($config['fullPath']) &&
-					$config['mtime'] == filemtime($config['fullPath'])){
+			foreach ($classes as $class => $config){
+				if ($config['className'] == $className){
+					$files = array_merge((array) $config['fullPath'], (array) $config['relFiles']);
+					foreach ($files as $file){
+						if (is_readable($file) && $config['mtime'] < filemtime($file)){
+							return false;
+						}
+					}
 					return true;
 				}
 			}
@@ -229,7 +233,7 @@ class ZendX_Sencha_Direct_Api
 		} else {
 			throw new Sencha_Direct_Exception('Invalid config sent to ' . __METHOD__);
 		}
-		
+
 		if ($this->_cached($className)){
 			return $this;
 		}
@@ -249,11 +253,28 @@ class ZendX_Sencha_Direct_Api
 		}
 		
 		$fileName = $cFile->getFileName();
+		$mtime = filemtime($fileName);
+
+		$relatedFiles = array();
+		$parents = function($rc)use(&$relatedFiles, &$mtime, &$parents){
+			if ($p = $rc->getParentClass()) {
+				$f = $p->getDeclaringFile();
+				$filename = $f->getFileName();
+				$relatedFiles[] = $filename;
+				$filemtime = filemtime($filename);
+				if ($filemtime > $mtime){
+					$mtime = $filemtime;
+				}
+				$parents($p);
+			}
+			return $relatedFiles;
+		};
 
 		$classConfig = array(
 			'className'	=> $rc->name,
 			'fullPath'	=> $fileName,
-			'mtime'		=> filemtime($fileName),
+			'relFiles'	=> $parents($rc),
+			'mtime'		=> $mtime,
 			'methods'	=> array()
 		);
 
