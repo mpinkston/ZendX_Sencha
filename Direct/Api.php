@@ -192,6 +192,9 @@ class ZendX_Sencha_Direct_Api
 		if (is_array($classes)){
 			foreach ($classes as $class => $config){
 				if ($config['className'] == $className){
+					if (!array_key_exists('fullPath', $config) || !array_key_exists('relFiles', $config)){
+						return false;
+					}
 					$files = array_merge((array) $config['fullPath'], (array) $config['relFiles']);
 					foreach ($files as $file){
 						if (is_readable($file) && $config['mtime'] < filemtime($file)){
