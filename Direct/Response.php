@@ -26,24 +26,211 @@
  */
 class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
 {
-	const DIRECT = 'direct';
+	/**
+	 * _transactions
+	 * 
+	 * (default value: array())
+	 * 
+	 * @var array
+	 * @access protected
+	 */
+	protected $_transactions = array();
+
+	/**
+	 * __construct function.
+	 * 
+	 * @access public
+	 * @return void
+	 */
+	public function __construct()
+	{
+		$jsonHelper = Zend_Controller_Action_HelperBroker::getStaticHelper('Json');
+		$jsonHelper->suppressExit = true;		
+	}
+
+	/**
+	 * _getTid function.
+	 * Returns the id for the current transaction.
+	 * 
+	 * @access protected
+	 * @return int
+	 */
+	protected function _getTid()
+	{
+		$request = Zend_Controller_Front::getInstance()->getRequest();
+		return (int) $request->getTid();
+	}
+
+	/**
+	 * _getControllerName function.
+	 * 
+	 * @access protected
+	 * @return void
+	 */
+	protected function _getControllerName()
+	{
+		$request = Zend_Controller_Front::getInstance()->getRequest();
+		return $request->getControllerName();
+	}
+	
+	/**
+	 * _getActionName function.
+	 * 
+	 * @access protected
+	 * @return void
+	 */
+	protected function _getActionName()
+	{
+		$request = Zend_Controller_Front::getInstance()->getRequest();
+		return $request->getActionName();
+	}
 
     /**
-     * Append content to the body content
-     *
-     * @param string $content
-     * @param null|string $name
-     * @return Zend_Controller_Response_Abstract
+     * setBody function.
+     * 
+     * @access public
+     * @param mixed $content
+     * @param mixed $tid. (default: null)
+     * @return void
      */
-    public function appendBody($content, $name = null)
+    public function setBody($content, $tid = null, $controllerName = null, $actionName = null)
     {
-    	if (!isset($this->_body[self::DIRECT])){
-    		$this->_body[self::DIRECT] = array();
-    	}
-    	$this->_body[self::DIRECT][] = $content;
-        return $this;
+		$tid = (int) (null===$tid)?$this->_getTid():$tid;
+		if ($controllerName === null){
+			$controllerName = $this->_getControllerName();
+		}
+		if ($actionName === null){
+			$actionName = $this->_getActionName();
+		}
+
+		try {
+			$data = Zend_Json::decode($content);
+		} catch (Zend_Json_Exception $e){
+			$data = $content;
+		}
+
+		$this->_transactions[$tid] = array(
+			'type'		=> 'rpc',
+			'tid'		=> $tid,
+			'action'	=> $controllerName,
+			'method'	=> $actionName,
+			'result'	=> $data
+		);
+		
+		return $this;
     }
-    
+
+    /**
+     * appendBody function.
+     * 
+     * @access public
+     * @param mixed $content
+     * @param mixed $tid. (default: null)
+     * @return void
+     */
+    public function appendBody($content, $tid = null)
+    {
+		if (!$content){
+			return $this;
+		}
+
+		$tid = (int) (null===$tid)?$this->_getTid():$tid;
+		if (!isset($this->_transactions[$tid])){
+			return $this->setBody($content, $tid);
+		}
+
+		try {
+			$data = Zend_Json::decode($content);
+		} catch (Zend_Json_Exception $e){
+			$data = $content;
+		}
+ChromePhp::log($data);
+		if (is_array($this->_transactions[$tid]['result'])){
+			$this->_transactions[$tid]['result'][] = $data;
+		} else if (is_string($this->_transactions[$tid]['result'])) {
+			$this->_transactions[$tid]['result'] .= (string) $data;
+		}
+
+		return $this;
+    }
+
+    /**
+     * clearBody function.
+     * Shouldn't clear the body.. ExtDirect would be confused.
+     * 
+     * @access public
+     * @param mixed $tid. (default: null)
+     * @return void
+     */
+    public function clearBody($tid = null)
+    {
+    	return $this;
+    }
+
+    /**
+     * Return the body content
+     *
+     * If $spec is false, returns the concatenated values of the body content
+     * array. If $spec is boolean true, returns the body content array. If
+     * $spec is a string and matches a named segment, returns the contents of
+     * that segment; otherwise, returns null.
+     *
+     * @param boolean $spec
+     * @return string|array|null
+     */
+    public function getBody($spec = false)
+    {
+        if (false === $spec) {
+            ob_start();
+            $this->outputBody();
+            return ob_get_clean();
+        } elseif (true === $spec) {
+            return $this->_transactions;
+        } elseif (is_numeric($spec) && isset($this->_transactions[$spec])) {
+            return $this->_transactions[$spec];
+        }
+
+        return null;
+    }
+
+    /**
+     * append function.
+     * 
+     * @access public
+     * @param mixed $name
+     * @param mixed $content
+     * @return void
+     */
+    public function append($name, $content)
+    {
+    }
+
+    /**
+     * prepend function.
+     * 
+     * @access public
+     * @param mixed $name
+     * @param mixed $content
+     * @return void
+     */
+    public function prepend($name, $content)
+    {
+    }
+
+    /**
+     * insert function.
+     * 
+     * @access public
+     * @param mixed $name
+     * @param mixed $content
+     * @param mixed $parent. (default: null)
+     * @param bool $before. (default: false)
+     * @return void
+     */
+    public function insert($name, $content, $parent = null, $before = false)
+    {
+    }
+
     /**
      * setException function.
      * 
@@ -51,15 +238,49 @@ class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
      * @param mixed Exception $e
      * @return void
      */
-    public function setException(Exception $e)
+    public function setException(Exception $e, $tid = null)
     {
-    	if (!($e instanceof ZendX_Sencha_Direct_Exception)){
-    		$request = Zend_Controller_Front::getInstance()->getRequest();
-    		if ($request instanceof ZendX_Sencha_Direct_Request){
-	    		$e = new ZendX_Sencha_Direct_Exception($request->getTid(), $e);
-	    	}
-    	}
+		$tid = (int) (null===$tid)?$this->_getTid():$tid;
+		$this->_transactions[$tid] = array(
+			'type'		=> 'exception',
+			'tid'		=> $tid,
+			'message'	=> $e->getMessage(),
+			'where'		=> $e->getTrace()
+		);
+		// just to track whether the response has an exception..
     	parent::setException($e);
+    	return $this;
+    }
+
+    /**
+     * Echo the body segments
+     *
+     * @return void
+     */
+    public function outputBody()
+    {    
+    	$output = array();
+    	if (count($this->_transactions) > 1){
+	    	foreach ($this->_transactions as $trx) {
+	    		$output[] = $trx;
+	    	}
+	    } else {
+	    	$output = array_shift($this->_transactions);
+	    }
+	    $json = Zend_Json::encode($output);
+	    echo $this->formatJson($json);
+    }
+
+    /**
+     * Send the response, including all headers, rendering exceptions if so
+     * requested.
+     *
+     * @return void
+     */
+    public function sendResponse()
+    {
+        $this->sendHeaders();
+        $this->outputBody();
     }
 
 	/**
@@ -122,54 +343,4 @@ class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
 	
 	    return $result;
 	}
-
-    /**
-     * sendResponse function.
-     * 
-     * @access public
-     * @return void
-     */
-    public function sendResponse()
-    {
-    	$request = Zend_Controller_Front::getInstance()->getRequest();
-        $this->sendHeaders();
-        
-		$data = array();
-		// Add any exceptions to the response
-		if ($this->isException()) { // more like 'has' exception..
-			$formatter = ZendX_Sencha_Formatter::getFormatter('exception');
-			foreach ($this->getException() as $e){
-            	if ($e instanceof ZendX_Sencha_Direct_Exception){
-					if ($request->isBatchRequest()) {
-						array_push($data, $formatter->format($e));
-					} else {
-						$data = $formatter->format($e);
-					}
-				} else {
-					throw $e;
-				}
-			}
-		}
-
-		// Add successful results to the response
-		if (isset($this->_body[self::DIRECT]) && is_array($this->_body[self::DIRECT])) {
-			foreach ($this->_body[self::DIRECT] as $resp) {
-				if ($request->isBatchRequest()){
-					array_push($data, $resp);
-				} else {
-					$data = $resp;
-				}
-			}
-		}
-		
-		// Output the json string to the browser.
-		$json = Zend_Json::encode($data);
-
-        // TODO make this a config parameter
-		if (true){
-			echo self::formatJson($json);
-		} else {
-			echo $json;
-		}
-    }
 }

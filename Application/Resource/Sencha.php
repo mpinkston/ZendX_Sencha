@@ -34,6 +34,5 @@ class ZendX_Sencha_Application_Resource_Sencha extends Zend_Application_Resource
 	 */
 	public function init()
 	{
-		// I think this is where I'll init the api config..
 	}
 }

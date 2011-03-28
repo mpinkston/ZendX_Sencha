@@ -45,15 +45,11 @@ class ZendX_Sencha_Application_Resource_Frontcontroller extends Zend_Application
     			if (!($this->_front->getRouter() instanceof ZendX_Sencha_Direct_Router)){
 	    			$this->_front->setRouter(new ZendX_Sencha_Direct_Router());
     			}
-    			if (!($this->_front->getDispatcher() instanceof ZendX_Sencha_Direct_Dispatcher)){
-    				$this->_front->setDispatcher(new ZendX_Sencha_Direct_Dispatcher());
-    			}
     			if (!($this->_front->getResponse() instanceof ZendX_Sencha_Direct_Response)){
     				$this->_front->setResponse(new ZendX_Sencha_Direct_Response());
     			}
 	            $this->_front->throwExceptions(false);
 	            $this->_front->setParam('noErrorHandler', true);
-	            $this->_front->setParam('noViewRenderer', true);
     		}
     	}
     	return $this->_front;

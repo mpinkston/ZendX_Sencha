@@ -190,8 +190,8 @@ class ZendX_Sencha_Direct_Api
 		$ns = $this->getNamespace();
 		$classes = self::$_session->$ns;
 		if (is_array($classes)){
-			foreach ($classes as $class => $config){
-				if ($config['className'] == $className){
+			foreach ($classes as $class => $config) {
+				if (array_key_exists('className', (array) $config) && $config['className'] == $className){
 					if (!array_key_exists('fullPath', $config) || !array_key_exists('relFiles', $config)){
 						return false;
 					}

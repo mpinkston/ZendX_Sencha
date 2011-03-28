@@ -29,6 +29,8 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	// The default version of the ExtJs library
 	const EXTJS_VERSION	= '3.3.1';
 
+//const EXTJS_VERSION = '4.0-pr5';
+
 	// The default version of the SenchaTouch library
 	// TODO configure sencha touch libs
 	const SENCHATOUCH_VERSION = '';
@@ -283,6 +285,7 @@ EOS;
 
 	/**
 	 * loadExt function.
+	 * TODO This whole function needs to be figured out..
 	 *
 	 * @access public
 	 * @param array $options. (default: array())
@@ -319,6 +322,13 @@ EOS;
 		if (array_key_exists('includeux', $options)){
 			$includeux = ($options['includeux']==true)?true:false;
 		}
+/*		
+		$extPath = "{$jsPath}/ext-{$version}/";
+		
+		$view->headLink()->appendStylesheet("{$extPath}/resources/css/ext-all.css");
+		$view->headScript()->appendFile("{$extPath}/bootstrap.js");
+*/
+		
 
 		// CSS
 		$view->headLink()->appendStylesheet("/css/icons.css");
@@ -372,7 +382,7 @@ EOS;
 		$app = preg_match('/\.js$/', $appName)?$appName:"{$appName}.js";
 		$view = $this->getView();
 
-		$file = self::SCRIPT_PATH . "/{$namespace}/{$appName}";
+		$file = self::SCRIPT_PATH . "/{$namespace}/{$app}";
 		if (is_readable(PUBLIC_PATH . $file)){
 			$this->_scripts[] = $file;
 			return $this;

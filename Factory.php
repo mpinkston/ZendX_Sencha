@@ -26,6 +26,21 @@
 class ZendX_Sencha_Factory
 {
 	/**
+	 * getForm function.
+	 * 
+	 * @access public
+	 * @static
+	 * @param mixed Zend_Form $form
+	 * @param array $options. (default: array())
+	 * @return void
+	 */
+	public static function getForm(Zend_Form $form, $options=array())
+	{
+		$formatter = new ZendX_Sencha_Formatter_Form();	
+		return $formatter->format($form);
+	}
+
+	/**
 	 * getStore function.
 	 * 
 	 * @access public

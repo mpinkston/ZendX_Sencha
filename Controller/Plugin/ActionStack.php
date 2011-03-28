@@ -27,8 +27,72 @@
 class ZendX_Sencha_Controller_Plugin_ActionStack extends Zend_Controller_Plugin_ActionStack
 {
     /**
+     * Valid keys for stack items
+     * (this doesn't appear to get used anywhere right now..)
+     *
+     * @var array
+     */
+    protected $_validKeys = array(
+        'module',
+        'controller',
+        'action',
+        'params',
+        'type',
+        'tid'
+    );
+
+    /**
+     * Pop an item off the action stack
+     *
+     * @return false|Zend_Controller_Request_Abstract
+     */
+    public function popStack()
+    {
+        $stack = $this->getStack();
+        if (0 == count($stack)) {
+            return false;
+        }
+
+        $next = array_pop($stack);
+        $this->_saveStack($stack);
+
+        if (!$next instanceof Zend_Controller_Request_Abstract) {
+            require_once 'Zend/Controller/Exception.php';
+            throw new Zend_Controller_Exception('ArrayStack should only contain request objects');
+        }
+        $action = $next->getActionName();
+        if (empty($action)) {
+            return $this->popStack($stack);
+        }
+
+        $request    = $this->getRequest();
+        $controller = $next->getControllerName();
+        if (empty($controller)) {
+            $next->setControllerName($request->getControllerName());
+        }
+
+        $module = $next->getModuleName();
+        if (empty($module)) {
+            $next->setModuleName($request->getModuleName());
+        }
+
+		// no reason these shouldn't already be set though..
+		$type = $next->getType();
+		if (empty($type)) {
+			$next->setType($request->getType());
+		}
+		
+		$tid = $next->getTid();
+		if (empty($tid)) {
+			$next->setTid($request->getTid());
+		}
+
+        return $next;
+    }
+
+    /**
      * Forward request with next action
-     * (while being sure to preserve type and tid
+     * (while being sure to preserve type and tid)
      *
      * @param  array $next
      * @return void
