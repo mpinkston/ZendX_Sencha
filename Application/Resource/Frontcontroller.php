@@ -36,7 +36,7 @@ class ZendX_Sencha_Application_Resource_Frontcontroller extends Zend_Application
     	if (null === $this->_front){
     		$this->_front = Zend_Controller_Front::getInstance();
 			$request = new ZendX_Sencha_Direct_Request();
-    		if ($request->isXmlHttpRequest()){
+    		if ($request->isDirectRequest()){
 
     			// Configure the front controller
     			if (!($this->_front->getRequest() instanceof ZendX_Sencha_Direct_Request)){

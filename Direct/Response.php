@@ -44,8 +44,11 @@ class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
 	 */
 	public function __construct()
 	{
+		$this->setHeader('Content-Type', 'application/json');
+	
+		// Configure the Json helper to accommodate batch requests.
 		$jsonHelper = Zend_Controller_Action_HelperBroker::getStaticHelper('Json');
-		$jsonHelper->suppressExit = true;		
+		$jsonHelper->suppressExit = true;
 	}
 
 	/**
@@ -90,15 +93,19 @@ class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
      * 
      * @access public
      * @param mixed $content
-     * @param mixed $tid. (default: null)
+     * @param mixed $name. (default: null)
+     * @param mixed $controllerName. (default: null)
+     * @param mixed $actionName. (default: null)
      * @return void
      */
-    public function setBody($content, $tid = null, $controllerName = null, $actionName = null)
+    public function setBody($content, $name = null, $controllerName = null, $actionName = null)
     {
-		$tid = (int) (null===$tid)?$this->_getTid():$tid;
+		$tid = is_int($name)?$name:$this->_getTid();
+
 		if ($controllerName === null){
 			$controllerName = $this->_getControllerName();
 		}
+
 		if ($actionName === null){
 			$actionName = $this->_getActionName();
 		}
@@ -106,6 +113,7 @@ class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
 		try {
 			$data = Zend_Json::decode($content);
 		} catch (Zend_Json_Exception $e){
+			parent::setBody($content, $name);
 			$data = $content;
 		}
 
@@ -125,16 +133,13 @@ class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
      * 
      * @access public
      * @param mixed $content
-     * @param mixed $tid. (default: null)
+     * @param mixed $name. (default: null)
      * @return void
      */
-    public function appendBody($content, $tid = null)
+    public function appendBody($content, $name = null)
     {
-		if (!$content){
-			return $this;
-		}
+		$tid = is_int($name)?$name:$this->_getTid();
 
-		$tid = (int) (null===$tid)?$this->_getTid():$tid;
 		if (!isset($this->_transactions[$tid])){
 			return $this->setBody($content, $tid);
 		}
@@ -142,93 +147,19 @@ class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
 		try {
 			$data = Zend_Json::decode($content);
 		} catch (Zend_Json_Exception $e){
+			parent::appendBody($content, $name);
 			$data = $content;
 		}
-ChromePhp::log($data);
-		if (is_array($this->_transactions[$tid]['result'])){
-			$this->_transactions[$tid]['result'][] = $data;
-		} else if (is_string($this->_transactions[$tid]['result'])) {
-			$this->_transactions[$tid]['result'] .= (string) $data;
+
+		if ($data){
+			if (is_array($this->_transactions[$tid]['result'])){
+				$this->_transactions[$tid]['result'][] = $data;
+			} else if (is_string($this->_transactions[$tid]['result'])) {
+				$this->_transactions[$tid]['result'] .= (string) $data;
+			}
 		}
 
 		return $this;
-    }
-
-    /**
-     * clearBody function.
-     * Shouldn't clear the body.. ExtDirect would be confused.
-     * 
-     * @access public
-     * @param mixed $tid. (default: null)
-     * @return void
-     */
-    public function clearBody($tid = null)
-    {
-    	return $this;
-    }
-
-    /**
-     * Return the body content
-     *
-     * If $spec is false, returns the concatenated values of the body content
-     * array. If $spec is boolean true, returns the body content array. If
-     * $spec is a string and matches a named segment, returns the contents of
-     * that segment; otherwise, returns null.
-     *
-     * @param boolean $spec
-     * @return string|array|null
-     */
-    public function getBody($spec = false)
-    {
-        if (false === $spec) {
-            ob_start();
-            $this->outputBody();
-            return ob_get_clean();
-        } elseif (true === $spec) {
-            return $this->_transactions;
-        } elseif (is_numeric($spec) && isset($this->_transactions[$spec])) {
-            return $this->_transactions[$spec];
-        }
-
-        return null;
-    }
-
-    /**
-     * append function.
-     * 
-     * @access public
-     * @param mixed $name
-     * @param mixed $content
-     * @return void
-     */
-    public function append($name, $content)
-    {
-    }
-
-    /**
-     * prepend function.
-     * 
-     * @access public
-     * @param mixed $name
-     * @param mixed $content
-     * @return void
-     */
-    public function prepend($name, $content)
-    {
-    }
-
-    /**
-     * insert function.
-     * 
-     * @access public
-     * @param mixed $name
-     * @param mixed $content
-     * @param mixed $parent. (default: null)
-     * @param bool $before. (default: false)
-     * @return void
-     */
-    public function insert($name, $content, $parent = null, $before = false)
-    {
     }
 
     /**
@@ -272,8 +203,7 @@ ChromePhp::log($data);
     }
 
     /**
-     * Send the response, including all headers, rendering exceptions if so
-     * requested.
+     * Send the response, including all headers.
      *
      * @return void
      */

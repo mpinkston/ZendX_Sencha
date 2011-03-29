@@ -64,6 +64,28 @@ class ZendX_Sencha_Direct_Request extends Zend_Controller_Request_Http
 	protected $_typeKey = 'type';
 
 	/**
+	 * _isDirectRequest
+	 * 
+	 * (default value: false)
+	 * 
+	 * @var bool
+	 * @access protected
+	 * @static
+	 */
+	protected static $_isDirectRequest = false;
+
+	/**
+	 * _isDirectSubmit
+	 * 
+	 * (default value: false)
+	 * 
+	 * @var bool
+	 * @access protected
+	 * @static
+	 */
+	protected static $_isDirectSubmit = false;
+
+	/**
 	 * _isBatchRequest
 	 * 
 	 * (default value: false)
@@ -75,16 +97,25 @@ class ZendX_Sencha_Direct_Request extends Zend_Controller_Request_Http
 	protected static $_isBatchRequest = false;
 
 	/**
-	 * setBatchRequest function.
+	 * isDirectRequest function.
 	 * 
 	 * @access public
-	 * @param mixed $isBatch
 	 * @return void
 	 */
-	public function setBatchRequest($isBatch)
+	public function isDirectRequest()
 	{
-		self::$_isBatchRequest = (bool) $isBatch;
-		return $this;
+		return self::$_isDirectRequest;		
+	}
+
+	/**
+	 * isDirectSubmit function.
+	 * 
+	 * @access public
+	 * @return void
+	 */
+	public function isDirectSubmit()
+	{
+		return self::$_isDirectSubmit;
 	}
 
 	/**
@@ -96,6 +127,56 @@ class ZendX_Sencha_Direct_Request extends Zend_Controller_Request_Http
 	public function isBatchRequest()
 	{
 		return self::$_isBatchRequest;
+	}
+
+	/**
+	 * __construct function.
+	 * 
+	 * @access public
+	 * @param mixed $uri. (default: null)
+	 * @return void
+	 */
+	public function __construct($uri = null)
+	{
+		parent::__construct($uri);
+		$this->_checkDirect();
+	}
+
+	/**
+	 * _checkDirect function.
+	 * 
+	 * @access private
+	 * @return void
+	 */
+	private function _checkDirect()
+	{
+		if ($this->isXmlHttpRequest()){
+			if (strpos($this->getHeader('Content-Type'), 'application/json') !== false) {
+				try {
+					$data = Zend_Json::decode($this->getRawBody());
+					if ($data){
+						if (is_int(key($data))){
+							self::$_isBatchRequest = true;
+							$data = array_shift($data);
+						}
+						
+						if (array_key_exists('tid', $data) &&
+							array_key_exists('type', $data) &&
+							$data['type'] == 'rpc'){
+							self::$_isDirectRequest = true;
+						}
+					}
+				} catch (Zend_Json_Exception $e){}
+			} else {
+				$data = $this->getPost();
+				if (array_key_exists('extTID', $data) &&
+					array_key_exists('extType', $data) &&
+					$data['extType'] == 'rpc'){
+					self::$_isDirectRequest = true;
+					self::$_isDirectSubmit = true;
+				}
+			}
+		}
 	}
 
     /**

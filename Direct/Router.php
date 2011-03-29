@@ -109,17 +109,16 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
      */
     public function route(Zend_Controller_Request_Abstract $request)
 	{
-		$this->_request = $request;
-
-		if (!$request->isPost() || !$request->isXmlHttpRequest()){
-			throw new Zend_Controller_Router_Exception('Invalid Request');
+		if (!$request->isDirectRequest()) {
+			throw new Zend_Controller_Router_Exception('Invalid request');
 		}
-		
-		if (strstr($request->getHeader('Content-Type'), 'application/json') !== false) {
+	
+		$this->_request = $request;
+		if ($request->isDirectSubmit()) {
+			$this->_parseFormData($request->getPost());
+		} else {
 			$data = Zend_Json::decode($request->getRawBody(), Zend_Json::TYPE_ARRAY);
 			$this->_parseArray($data);
-		} else {
-			$this->_parseFormData($request->getPost());
 		}
 	}
 	
@@ -133,15 +132,12 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 	public function _parseArray($data)
 	{
 		if (is_int(key($data))) {
-			// Batch request
-			$this->_request->setBatchRequest(true);
-			foreach ($data as $d){
+			foreach ($data as $d) {
 				$this->_parseArray($d);
 			}
 			return;
 		}
 
-		// TODO validate $data to make sure it actually has the appropriate keys.
 		$tid = (int) $data['tid'];
 		$type = $data['type'];
 		$module = preg_replace('/' . ZendX_Sencha_Direct_Api::NS_SUFFIX . '$/', '', $data['namespace']);
@@ -151,7 +147,16 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 		if (count($params) && is_int(key($params))){
 			$params = array_shift($params);
 		}
-		
+
+		// Add the contextSwitch parameter
+		if (true){ // from a config option?
+			$context = Zend_Controller_Action_HelperBroker::getStaticHelper('ContextSwitch');
+			$contextParam = $context->getContextParam();
+			if (!array_key_exists($contextParam, $params)){
+				$params[$contextParam] = 'json';
+			}
+		}		
+
 		if ($this->_request->isBatchRequest() && $this->_initialRequestRouted) {
 	        $request = clone $this->_request;
 	        $request->setTid($tid);
@@ -183,7 +188,6 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 	 */
 	public function _parseFormData($data)
 	{
-		// TODO make sure $data has the right keys.
 		$module = preg_replace('/' . ZendX_Sencha_Direct_Api::NS_SUFFIX . '$/', '', $data['extNamespace']);
 		$this->_request->setTid($data['extTID']);
 		$this->_request->setType($data['extType']);
