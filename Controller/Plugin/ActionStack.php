@@ -19,6 +19,12 @@
  * @license    http://www.ics-llc.net/license/new-bsd  New BSD License
  */
 
+/** Zend_Controller_Request_Abstract */
+require_once 'Zend/Controller/Request/Abstract.php';
+
+/** Zend_Controller_Plugin_ActionStack */
+require_once 'Zend/Controller/Plugin/ActionStack.php';
+
 /**
  * ZendX_Sencha_Controller_Plugin_ActionStack class.
  * 

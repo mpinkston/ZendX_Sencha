@@ -29,34 +29,45 @@ class ZendX_Sencha_Direct_Api
 {
 	// The Zend_Session_Namespace name in which all api definitions
 	// will be stored
-	const SESSION_NS	= 'ExtDirect_NS';
+	protected static $_sessionNamespace = 'ExtDirect_NS';
 
 	// The URL to which the rpc client should make requests
-	const ROUTER_URL	= '/index.php';
+	protected static $_routerUrl		= '/index.php';
 
 	// The type of provider (we haven't expiramented with polling yet)
-	const PROVIDER_TYPE	= 'remoting';
-	
+	protected static $_providerType		= 'remoting';
+
 	// This will expose the action as Namespace.rpc
 	// on the server.
-	const NS_SUFFIX 	= '.rpc';
+	protected static $_nsSuffix 		= '.rpc';
 
 	// specifies whether or not the method will be
 	// exposed as an rpc method	
-	const REMOTE_ATTR	= 'remotable';
-	
+	protected static $_remoteAttribute	= 'remotable';
+
 	// specifies whether this method will be receiving values
 	// from a form
-	const FORM_ATTR		= 'formHandler';
-	
+	protected static $_formAttribute	= 'formHandler';
+
 	// Can be used in the docblock of a class or a method to 
 	// modify its name as it appears to the rpc client.
-	const NAME_ATTR		= 'remoteName';
+	protected static $_nameAttribute	= 'remoteName';
 	
-	// This is a standard docblock attribute.
-	const PARAM_ATTR	= 'param';
+	// This is a standard docblock attribute.	
+	protected static $_paramAttribute	= 'param';
 	
-	
+	/**
+	 * getNsSuffix function.
+	 * 
+	 * @access public
+	 * @static
+	 * @return void
+	 */
+	public static function getNsSuffix()
+	{
+		return self::$_nsSuffix;
+	}
+
 	/**
 	 * _session
 	 * 
@@ -85,7 +96,8 @@ class ZendX_Sencha_Direct_Api
 	public function __construct()
 	{
         if (!self::$_session instanceof Zend_Session_Namespace) {
-            self::$_session = new Zend_Session_Namespace(self::SESSION_NS);
+			require_once 'Zend/Session/Namespace.php';
+            self::$_session = new Zend_Session_Namespace(self::$_sessionNamespace);
         }
 	}
 
@@ -139,9 +151,9 @@ class ZendX_Sencha_Direct_Api
 	{
 		$ns = $this->getNamespace();
 		$provider = array(
-			'type'		=> self::PROVIDER_TYPE,
-			'url'		=> self::ROUTER_URL,
-			'namespace'	=> $ns . self::NS_SUFFIX,
+			'type'		=> self::$_providerType,
+			'url'		=> self::$_routerUrl,
+			'namespace'	=> $ns . self::$_nsSuffix,
 		);
 
 		if (!isset(self::$_session->$ns)){
@@ -211,7 +223,6 @@ class ZendX_Sencha_Direct_Api
 	/**
 	 * add function.
 	 * Add one or more remotable classes.
-	 * This time, we'll do reflection up-front.
 	 * 
 	 * @access public
 	 * @param mixed $config
@@ -246,7 +257,7 @@ class ZendX_Sencha_Direct_Api
 		$cFile = $rc->getDeclaringFile();
 		$cDoc  = $rc->getDocBlock();
 
-		$cTag = $cDoc->getTag(self::NAME_ATTR);
+		$cTag = $cDoc->getTag(self::$_nameAttribute);
 		if ($cTag){
 			$cName = trim($cTag->getDescription());
 		} else if ($config instanceof Zend_Controller_Action) {
@@ -284,14 +295,14 @@ class ZendX_Sencha_Direct_Api
 		foreach($rc->getMethods() as $cMethod){
 			$mDoc = $cMethod->getDocBlock();
 			if (!$mDoc->hasTag('remotable')){ continue; }
-			$mTag = $mDoc->getTag(self::NAME_ATTR);
-			$pTags = $mDoc->getTags(self::PARAM_ATTR);
+			$mTag = $mDoc->getTag(self::$_nameAttribute);
+			$pTags = $mDoc->getTags(self::$_paramAttribute);
 			$mName = $mTag?trim($mTag->getDescription()):$cMethod->name;
 
 			$classConfig['methods'][$mName] = array(
 				'methodName'	=> $cMethod->name,
 				'length'		=> count($pTags),
-				'formHandler'	=> $mDoc->hasTag(self::FORM_ATTR)
+				'formHandler'	=> $mDoc->hasTag(self::$_formAttribute)
 			);
 		}
 		

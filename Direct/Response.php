@@ -19,6 +19,12 @@
  * @license    http://www.ics-llc.net/license/new-bsd  New BSD License
  */
 
+/** Zend_Controller_Response_Http */
+require_once 'Zend/Controller/Response/Http.php';
+
+/** Zend_Controller_Action_HelperBroker */
+require_once 'Zend/Controller/Action/HelperBroker.php';
+
 /**
  * ZendX_Sencha_Direct_Response class.
  * 

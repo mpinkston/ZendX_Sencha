@@ -19,6 +19,9 @@
  * @license    http://www.ics-llc.net/license/new-bsd  New BSD License
  */
 
+/** Zend_Controller_Router_Abstract */
+require_once 'Zend/Controller/Router/Abstract.php';
+
 /**
  * ZendX_Sencha_Direct_Router class.
  * 
@@ -140,7 +143,7 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 
 		$tid = (int) $data['tid'];
 		$type = $data['type'];
-		$module = preg_replace('/' . ZendX_Sencha_Direct_Api::NS_SUFFIX . '$/', '', $data['namespace']);
+		$module = preg_replace('/' . ZendX_Sencha_Direct_Api::getNsSuffix() . '$/', '', $data['namespace']);
 		$controller = $data['action'];
 		$action = $data['method'];
 		$params = is_array($data['data'])?$data['data']:array();
@@ -150,6 +153,7 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 
 		// Add the contextSwitch parameter
 		if (true){ // from a config option?
+			require_once 'Zend/Controller/Action/HelperBroker.php';
 			$context = Zend_Controller_Action_HelperBroker::getStaticHelper('ContextSwitch');
 			$contextParam = $context->getContextParam();
 			if (!array_key_exists($contextParam, $params)){
@@ -188,7 +192,7 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 	 */
 	public function _parseFormData($data)
 	{
-		$module = preg_replace('/' . ZendX_Sencha_Direct_Api::NS_SUFFIX . '$/', '', $data['extNamespace']);
+		$module = preg_replace('/' . ZendX_Sencha_Direct_Api::getNsSuffix() . '$/', '', $data['extNamespace']);
 		$this->_request->setTid($data['extTID']);
 		$this->_request->setType($data['extType']);
 		$this->_request->setModuleName($this->_formatName($module));

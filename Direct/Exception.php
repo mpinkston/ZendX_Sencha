@@ -19,6 +19,9 @@
  * @license    http://www.ics-llc.net/license/new-bsd  New BSD License
  */
 
+/** Zend_Exception */
+require_once 'Zend/Exception.php';
+
 /**
  * ZendX_Sencha_Direct_Exception class.
  * 

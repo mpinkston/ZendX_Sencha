@@ -19,6 +19,9 @@
  * @license    http://www.ics-llc.net/license/new-bsd  New BSD License
  */
 
+/** Zend_Controller_Request_Http */
+require_once 'Zend/Controller/Request/Http.php';
+
 /**
  * ZendX_Sencha_Direct_Request class.
  * 
