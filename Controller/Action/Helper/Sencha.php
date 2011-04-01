@@ -517,7 +517,7 @@ EOS;
 		}
 
 		$jsFile = '';
-		foreach (scandir($jsPath . $namespaceDir) as $f){
+		foreach (scandir($jsPath . DS . $namespaceDir) as $f){
 			if (strtolower($app) == strtolower($f)){
 				$jsFile = $f;
 				break;
