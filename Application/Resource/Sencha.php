@@ -105,6 +105,7 @@ class ZendX_Sencha_Application_Resource_Sencha extends Zend_Application_Resource
     public function configureFrontController()
     {
 		$front = Zend_Controller_Front::getInstance();
+		$options = $this->getOptions();
 		$request = $this->getRequest();
 
 		// Use this request object even if it's not a direct request
@@ -116,7 +117,7 @@ class ZendX_Sencha_Application_Resource_Sencha extends Zend_Application_Resource
 			// Configure the front controller
 			if (!($front->getRouter() instanceof ZendX_Sencha_Direct_Router)){
 				require_once 'ZendX/Sencha/Direct/Router.php';
-    			$front->setRouter(new ZendX_Sencha_Direct_Router());
+    			$front->setRouter(new ZendX_Sencha_Direct_Router($options));
 			}
 			if (!($front->getResponse() instanceof ZendX_Sencha_Direct_Response)){
 				require_once 'ZendX/Sencha/Direct/Response.php';

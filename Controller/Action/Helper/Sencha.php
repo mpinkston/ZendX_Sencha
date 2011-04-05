@@ -313,55 +313,20 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	 */
 	private function _patchRemotingProvider()
 	{
-		$script = <<<EOS
-(function() {
-	var originalGetCallData = Ext.direct.RemotingProvider.prototype.getCallData;
-	Ext.override(Ext.direct.RemotingProvider, {
-		getCallData: function(t) {
-			var defaults = originalGetCallData.apply(this, arguments);
-			return Ext.apply(defaults, {
-				namespace: this.namespace.APIDesc.namespace
-			});
-		},
-
-	    doForm : function(c, m, form, callback, scope){
-	        var t = new Ext.Direct.Transaction({
-	            provider: this,
-	            action: c,
-	            method: m.name,
-	            args:[form, callback, scope],
-	            cb: scope && Ext.isFunction(callback) ? callback.createDelegate(scope) : callback,
-	            isForm: true
-	        });
-
-	        if(this.fireEvent('beforecall', this, t, m) !== false){
-	            Ext.Direct.addTransaction(t);
-	            var isUpload = String(form.getAttribute("enctype")).toLowerCase() == 'multipart/form-data',
-	                params = {
-	                    extTID: t.tid,
-	                    extAction: c,
-	                    extMethod: m.name,
-	                    extNamespace: this.namespace.APIDesc.namespace,
-	                    extType: 'rpc',
-	                    extUpload: String(isUpload)
-	                };
-
-	            // change made from typeof callback check to callback.params
-	            // to support addl param passing in DirectSubmit EAC 6/2
-	            Ext.apply(t, {
-	                form: Ext.getDom(form),
-	                isUpload: isUpload,
-	                params: callback && Ext.isObject(callback.params) ? Ext.apply(params, callback.params) : params
-	            });
-	            this.fireEvent('call', this, t, m);
-	            this.processForm(t);
-	        }
-	    }
-	})
-})();
-
-EOS;
-		$this->getView()->headScript()->appendScript($script);
+		$options = $this->_config;
+		
+		if (!$options['library'] == 'ext'){
+			return;
+		}
+		
+		$majorVersion = substr($options['version'], 0, 1);
+		$libraryPath = APPLICATION_PATH . '/../library/ZendX/Sencha/';
+		$fileName = "RemotingProviderPatch.ext{$majorVersion}x.js";
+		$filePath = $libraryPath . 'Scripts/' . $fileName;
+		if (is_readable($filePath)) {
+			$script = file_get_contents($filePath);
+			$this->getView()->headScript()->appendScript($script);
+		}
 	}
 
 	/**
@@ -463,6 +428,30 @@ EOS;
 				break;
 		}
 		self::$_senchaLoaded = true;
+		return $this;
+	}
+
+	/**
+	 * loadExample function.
+	 * Convenient access to the examples dir
+	 * 
+	 * @access public
+	 * @param mixed $file
+	 * @return void
+	 */
+	public function loadExample($file)
+	{
+		$file = trim($file, DS);
+		$options = $this->_config;
+		$libraryPath = $this->getLibraryPath();
+		$filePath = $libraryPath . DS . 'examples' . DS . $file;
+		if (is_readable(PUBLIC_PATH . $filePath)){
+			if (substr($file, -2) == 'js') {
+				$this->getView()->headScript()->appendFile($filePath);
+			} else if (substr($file, -3) == 'css') {
+				$this->getView()->headLink()->appendStylesheet($filePath);
+			}
+		}
 		return $this;
 	}
 

@@ -51,6 +51,16 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 	private $_initialRequestRouted = false;
 
 	/**
+	 * _autoContext
+	 * 
+	 * (default value: true)
+	 * 
+	 * @var bool
+	 * @access private
+	 */
+	private $_autoContext = true;
+
+	/**
 	 * _actionStack
 	 * Used for adding batch requests
 	 * 
@@ -104,6 +114,20 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 	}
 	
     /**
+     * setParams function.
+     * 
+     * @access public
+     * @param mixed array $params
+     * @return void
+     */
+    public function setParams(array $params) {
+    	if (array_key_exists('autocontext', $params)){
+    		$this->_autoContext = (bool) $params['autocontext'];
+    	}
+    	parent::setParams($params);
+    }
+	
+    /**
      * route function.
      * 
      * @access public
@@ -124,15 +148,15 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 			$this->_parseArray($data);
 		}
 	}
-	
+
 	/**
 	 * _parseArray function.
 	 * 
-	 * @access public
-	 * @param mixed $json
+	 * @access protected
+	 * @param mixed $data
 	 * @return void
 	 */
-	public function _parseArray($data)
+	protected function _parseArray($data)
 	{
 		if (is_int(key($data))) {
 			foreach ($data as $d) {
@@ -150,16 +174,8 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 		if (count($params) && is_int(key($params))){
 			$params = array_shift($params);
 		}
-
-		// Add the contextSwitch parameter
-		if (true){ // from a config option?
-			require_once 'Zend/Controller/Action/HelperBroker.php';
-			$context = Zend_Controller_Action_HelperBroker::getStaticHelper('ContextSwitch');
-			$contextParam = $context->getContextParam();
-			if (!array_key_exists($contextParam, $params)){
-				$params[$contextParam] = 'json';
-			}
-		}		
+		
+		$params = $this->_addContext($params);
 
 		if ($this->_request->isBatchRequest() && $this->_initialRequestRouted) {
 	        $request = clone $this->_request;
@@ -186,11 +202,11 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 	/**
 	 * _parseFormData function.
 	 * 
-	 * @access public
+	 * @access protected
 	 * @param mixed $data
 	 * @return void
 	 */
-	public function _parseFormData($data)
+	protected function _parseFormData($data)
 	{
 		$module = preg_replace('/' . ZendX_Sencha_Direct_Api::getNsSuffix() . '$/', '', $data['extNamespace']);
 		$this->_request->setTid($data['extTID']);
@@ -198,9 +214,31 @@ class ZendX_Sencha_Direct_Router extends Zend_Controller_Router_Abstract
 		$this->_request->setModuleName($this->_formatName($module));
 		$this->_request->setControllerName($this->_formatName($data['extAction']));
 		$this->_request->setActionName($this->_formatName($data['extMethod']));
+		$data = $this->_addContext($data);
 		$this->_request->setParams($data);
 	}
 	
+	/**
+	 * _addContext function.
+	 * 
+	 * @access protected
+	 * @param mixed $params
+	 * @return void
+	 */
+	protected function _addContext($params)
+	{
+		// Add the contextSwitch parameter
+		if ($this->_autoContext === true){
+			require_once 'Zend/Controller/Action/HelperBroker.php';
+			$context = Zend_Controller_Action_HelperBroker::getStaticHelper('ContextSwitch');
+			$contextParam = $context->getContextParam();
+			if (!array_key_exists($contextParam, $params)){
+				$params[$contextParam] = 'json';
+			}
+		}
+		return $params;
+	}
+
 	/**
 	 * _formatName function.
 	 * This is to keep module/controller/action names consistent within the request object. 
