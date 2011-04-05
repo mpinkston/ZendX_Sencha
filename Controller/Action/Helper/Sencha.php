@@ -191,6 +191,7 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 				$value = $options[$key];
 			}
 		}
+		return $this;
     }
 
     /**
@@ -240,6 +241,7 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	public function setApi($api)
 	{
 		$this->_api = $api;
+		return $this;
 	}
 
     /**
@@ -377,7 +379,7 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	 */
 	public function loadExt($options = array())
 	{
-		$this->loadSencha($options);
+		return $this->loadSencha($options);
 	}
 
 	/**
@@ -537,6 +539,7 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	{
 		$api = $this->getApi();
 		$api->reset($allNamespaces);
+		return $this;
 	}
 
 	/**
