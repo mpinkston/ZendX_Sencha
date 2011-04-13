@@ -239,7 +239,7 @@ class ZendX_Sencha_Direct_Api
 			if ($filemtime > $mtime){
 				$mtime = $filemtime;
 			}
-			$this->_getParents($p, &$mtime, &$relatedFiles);
+			$this->_getParents($p, $mtime, $relatedFiles);
 		}
 		return $relatedFiles;
 	}
@@ -297,7 +297,7 @@ class ZendX_Sencha_Direct_Api
 		$classConfig = array(
 			'className'	=> $rc->name,
 			'fullPath'	=> $fileName,
-			'relFiles'	=> $this->_getParents($rc, &$mtime),
+			'relFiles'	=> $this->_getParents($rc, $mtime),
 			'mtime'		=> $mtime,
 			'methods'	=> array()
 		);
