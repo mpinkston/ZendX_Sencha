@@ -634,6 +634,17 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 
 		return $files;
 	}
+	
+	/**
+	 * appendFileDir function.
+	 * 
+	 * @access public
+	 * @param mixed $dir
+	 * @return void
+	 */
+	public function appendFileDir($dir){
+		return $this->appendDir($dir);
+	}
 
 	/**
 	 * appendFileDir function.
@@ -642,7 +653,8 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	 * @param mixed $dir
 	 * @return void
 	 */
-	public function appendFileDir($dir) {
+	public function appendDir($dir) {
+		$dir = trim($dir, DS);
 		$files = $this->_readDir($dir);
 		if (is_array($files)){
 			foreach($files as $file) {

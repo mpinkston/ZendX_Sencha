@@ -221,6 +221,30 @@ class ZendX_Sencha_Direct_Api
 	}
 
 	/**
+	 * _getParents function.
+	 * 
+	 * @access private
+	 * @param mixed $rc
+	 * @param mixed $relatedFiles
+	 * @param mixed $mtime
+	 * @return void
+	 */
+	private function _getParents($rc, &$mtime, &$relatedFiles=array()){
+		$tdf = $rc->getDeclaringFile();
+		if ($p = $rc->getParentClass()){
+			$f = $p->getDeclaringFile();
+			$filename = $f->getFileName();
+			array_push($relatedFiles, $filename);
+			$filemtime = filemtime($filename);
+			if ($filemtime > $mtime){
+				$mtime = $filemtime;
+			}
+			$this->_getParents($p, &$mtime, &$relatedFiles);
+		}
+		return $relatedFiles;
+	}
+
+	/**
 	 * add function.
 	 * Add one or more remotable classes.
 	 * 
@@ -268,26 +292,12 @@ class ZendX_Sencha_Direct_Api
 		
 		$fileName = $cFile->getFileName();
 		$mtime = filemtime($fileName);
-
 		$relatedFiles = array();
-		$parents = function($rc)use(&$relatedFiles, &$mtime, &$parents){
-			if ($p = $rc->getParentClass()) {
-				$f = $p->getDeclaringFile();
-				$filename = $f->getFileName();
-				$relatedFiles[] = $filename;
-				$filemtime = filemtime($filename);
-				if ($filemtime > $mtime){
-					$mtime = $filemtime;
-				}
-				$parents($p);
-			}
-			return $relatedFiles;
-		};
 
 		$classConfig = array(
 			'className'	=> $rc->name,
 			'fullPath'	=> $fileName,
-			'relFiles'	=> $parents($rc),
+			'relFiles'	=> $this->_getParents($rc, &$mtime),
 			'mtime'		=> $mtime,
 			'methods'	=> array()
 		);
