@@ -70,6 +70,13 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	/**
 	 * _scripts
 	 * An array of scripts to be loaded after the Ext libs
+	 * contains 
+	 * scriptName' => array(
+	 *		'defines' => array(
+	 			'Something.Something.Something'
+	 *		),
+	 *		'requires' => array(
+	 *	),
 	 *
 	 * (default value: array())
 	 * 
@@ -156,7 +163,7 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	 */
 	public function getScriptPath()
 	{
-		return $this->_scriptPath;
+		return PUBLIC_PATH . DS . trim($this->_scriptPath, DS);
 	}
 
     /**
@@ -296,11 +303,7 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 			$this->_patchRemotingProvider();
 		}
 
-		if (is_array($this->_scripts)){
-			foreach ($this->_scripts as $script){
-				$view->headScript()->appendFile($this->_scriptPath . DS . $script);
-			}
-		}
+		$this->_loadScripts();
 	}
 
 	/**
@@ -473,55 +476,160 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 
 	/**
 	 * load function.
-	 * Attempts to find/load a js app in the current namespace
-	 *
+	 * 
 	 * @access public
-	 * @param mixed $appName
+	 * @param mixed $config
 	 * @return void
 	 */
-	public function load($appName)
+	public function load($app)
 	{
-		$namespace = strtolower($this->getNamespace());
-		$app = preg_match('/\.js$/', $appName)?$appName:"{$appName}.js";
-		$view = $this->getView();
-
-		$file = $this->_scriptPath . DS . $namespace . DS . $app;
-		if (is_readable(PUBLIC_PATH . $file)){
-			$this->addScript($namespace . DS . $app);
-			return $this;
+		$options = $this->_config;
+		$path = trim($app, DS);
+		
+		if (!is_readable(PUBLIC_PATH . DS . $this->_scriptPath . DS . $path)){
+			$ns = $this->getNamespace();
+			$path = $ns . DS . trim($app . DS);
+		}
+		
+		$fullPath = PUBLIC_PATH . $this->_scriptPath . DS . $path;
+		
+		if (!is_readable($fullPath)){
+			require_once 'Zend/Controller/Action/Exception.php';
+			throw new Zend_Controller_Action_Exception(
+				'Specified script path is not readable or does not exist'
+			);
+		}
+		
+		// Add the file and return if it's a single js file.
+		if (is_file($fullPath) && substr($path, -3) == '.js') {
+			return $this->addScript($path);
 		}
 
-		// Try to hunt the file down.. not ideal.
-		$jsPath = PUBLIC_PATH . DS . $this->_scriptPath;
-		$namespaceDir = '';
+		// It's probably a directory, and perhaps an entire mvc app
+		if (is_dir($fullPath)) {
+			$this->scanDir($path);
+		}
+		return $this;
+	}
+	
+	/**
+	 * _buildCatalog function.
+	 * scans each file in _scripts and tries to determine
+	 * what is defined in the file, and what each file requires.
+	 * 
+	 * @access protected
+	 * @return void
+	 */
+	protected function _buildCatalog()
+	{
+		foreach($this->_scripts as $script => &$config){
+			$fc = file_get_contents(PUBLIC_PATH . $this->_scriptPath . DS . $script);
+			// Find Requirements
+			preg_match_all('/Ext.require\((.*?)\)/s', $fc, $match);
+			foreach ($match[1] as $r){
+				$r = preg_replace('/[\r\n\s\t\[\]]/','', $r);
+				foreach(explode(',', $r) as $req){
+					$config['requires'][] = $req;
+				}
+			}
+			// Find Defines
+			// (an array since aliases can be defined too even though I'm not including those yet)
+			preg_match_all('/Ext.define\((.*?),(:?.*)/s', $fc, $match);
+			foreach ($match[1] as $p){
+				$config['provides'][] = $p;
+			}
+		}
+		return $this;
+	}
 
-		foreach (scandir($jsPath) as $nsDir) {
-			if (strtolower($namespace) == strtolower($nsDir)){
-				$namespaceDir = $nsDir;
-				break;
+	/**
+	 * _findProvides function.
+	 * 
+	 * @access protected
+	 * @param mixed $req
+	 * @return void
+	 */
+	protected function _findProvides($req)
+	{
+		foreach ($this->_scripts as $path => $config){
+			if (isset($config['provides']) && in_array($req, $config['provides'])){
+				return $path;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * _loadScripts function.
+	 * 
+	 * @access protected
+	 * @return void
+	 */
+	protected function _loadScripts()
+	{
+		foreach ($this->_scripts as $script){
+			$this->getView()->headScript()->appendFile($this->_scriptPath . DS . $script);
+		}
+		return $this;
+	}
+
+	/**
+	 * scanDir function.
+	 * Builds an array of .js files anywhere in the 
+	 * 
+	 * @access public
+	 * @param mixed $path
+	 * @return void
+	 */
+	public function scanDir($path)
+	{
+		$path = trim($path, DS);
+		if (!is_dir(PUBLIC_PATH . $this->_scriptPath . DS . $path)){
+			require_once 'Zend/Controller/Action/Exception.php';
+			throw new Zend_Controller_Action_Exception(
+				'Specified script path is not readable or does not exist'
+			);
+		}
+
+		$stack = (array) $path;
+		$scripts = array();
+		$types = array('controller', 'model', 'store', 'view');
+		$currType = 'default';
+		
+		while (count($stack)){
+			$currDir = array_pop($stack);
+			if ($currFiles = scandir(PUBLIC_PATH . $this->_scriptPath . DS . $currDir)) {
+				foreach ($currFiles as $file){
+					$relPath = $currDir . DS . $file;
+					$fullPath = PUBLIC_PATH . $this->_scriptPath . DS . $relPath;
+					if (is_dir($fullPath) && $file != '.' && $file != '..') {
+						array_push($stack, $relPath);
+					} else if (is_file($fullPath) && substr($file, -3) == '.js') {
+						$parts = explode(DS, $relPath);
+						$currType = 'default';
+						foreach ($parts as $part){
+							if (in_array($part, $types)){
+								$currType = $part;
+								break;
+							}
+						}						
+						$scripts[$currType][] = $relPath;
+					}
+				}
 			}
 		}
 
-		if (!$namespaceDir) {
-			error_log("Could not find namespace directory ({$namespace}) while attempting to load {$appName}");
-			return $this;
-		}
-
-		$jsFile = '';
-		foreach (scandir($jsPath . DS . $namespaceDir) as $f){
-			if (strtolower($app) == strtolower($f)){
-				$jsFile = $f;
-				break;
+		foreach ($types as $type){
+			if (array_key_exists($type, $scripts) && is_array($scripts[$type])){
+				foreach ($scripts[$type] as $script){
+					$this->addScript($script);
+				}
 			}
 		}
-
-		$fullPath = $jsPath . DS . $namespaceDir . DS . $jsFile;
-		if (!$jsFile || !is_readable($fullPath)){
-			error_log("Failed to load or read {$fullPath}");
-			return $this;
+		foreach ($scripts['default'] as $script){
+			$this->addScript($script);
 		}
-
-		$this->addScript($namespaceDir . DS . $jsFile);
+		
 		return $this;
 	}
 
@@ -541,145 +649,7 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 		$api->reset($allNamespaces);
 		return $this;
 	}
-
-	/**
-	 * _readDir recursively searches directories for javascript files and adds
-	 * them to an array to return to the caller.
-	 *
-	 * Javascript files can be given an index on the first line of code with a
-	 * comment:
-	 * // 0
-	 * Would force that specific file to be included before all others in that
-	 * directory
-	 *
-	 * @param string $dir is a directory with the root being PUBLIC_PATH
-	 * @returns array of strings of the javascript files for the specified directory and it's subdirectories or and empty array
-	 */
-	private function _readDir($dir) {
-		$files = array();
-		$holdback = array();
-		$subdirfiles = array();
-		$path = PUBLIC_PATH . DS . $this->_scriptPath . DS . $dir;
-
-		if (!is_readable($path)){
-			return null;
-		}
-
-		$dirHnd = @opendir($path);
-
-		if ($dirHnd) {
-			while (($file = readdir($dirHnd)) !== false) {
-				if ($file !== '.' && $file !== '..' && substr($file, -1) !== '~' &&
-				substr($file, -7) !== '.ignore') {
-					// directory + file
-					$fdir = $dir . DS . $file;
-					// full path + file
-					$fpath = $path . DS . $file;
-
-					// if the file is a directory we need to recurse
-					if (is_dir($fpath)) {
-						$subdirfiles[] = $this->_readDir($fdir);
-					}
-					// Right now, we only care about files that are *.js
-					else if (preg_match("/\.js$/", $file)) {
-						// Check the file's priority
-						$fileContents = file_get_contents($fpath);
-						if (preg_match(",^// [0-9]+,", $fileContents, $match)) {
-							// this will be our index
-							$idx =  str_replace('// ', '', $match[0]);
-							// Put the file in a special array that will be used
-							// for inserting the files into their correct
-							// indexed location.
-							$holdback[$idx] = $fdir;
-						}
-						else {
-							// if the file doesn't have a priority, add it to
-							// the end of the array
-							array_push($files, $fdir);
-						}
-					}
-				}
-			}
-
-			// Close the directory when finished
-			closedir($dirHnd);
-
-			// Check if we have specially indexed files. If so, we need to
-			// insert them into the files array at the correct location
-			if(!empty($holdback)) {
-				// Just to make sure the array is correctly sorted by its keys
-				// since it may not be
-				ksort($holdback);
-				foreach($holdback as $idx => $file) {
-					// this effectively inserts the file at the correct idx
-					array_splice($files, $idx, 0, array($file));
-				}
-			}
-		}
-		else {
-			error_log('unable to open: ' . $dir);
-		}
-
-		// if we have subdirectories, we'll need to go through each one, which
-		// is an array
-		if (!empty($subdirfiles)) {
-			foreach($subdirfiles as $subdir) {
-				// sort by keys
-				ksort($subdir);
-				foreach($subdir as $file){
-					array_push($files, $file);
-				}
-			}
-		}
-
-		return $files;
-	}
-	
-	/**
-	 * appendFileDir function.
-	 * 
-	 * @access public
-	 * @param mixed $dir
-	 * @return void
-	 */
-	public function appendFileDir($dir){
-		return $this->appendDir($dir);
-	}
-
-	/**
-	 * appendFileDir function.
-	 * 
-	 * @access public
-	 * @param mixed $dir
-	 * @return void
-	 */
-	public function appendDir($dir) {
-		$dir = trim($dir, DS);
-		$files = $this->_readDir($dir);
-		if (is_array($files)){
-			foreach($files as $file) {
-				$this->addScript($file);
-			}
-		}
-		return $this;
-	}
-	
-	/**
-	 * appendFile function.
-	 * 
-	 * @access public
-	 * @param mixed $file
-	 * @return void
-	 */
-	public function appendFile($file) {
-		$path = PUBLIC_PATH . DS . 
-			$this->_config['scriptPath'] . DS . $file;
-		if (is_readable($path)){
-			$this->addScript($file);
-		}
-		return $this;
-	}
-
+		
 	/**
 	 * addScript function.
 	 * 
@@ -689,8 +659,8 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	 */
 	public function addScript($script)
 	{
-		if (!in_array($script, $this->_scripts)) {
-			array_push($this->_scripts, $script);
+		if (!array_key_exists($script, $this->_scripts)) {
+			$this->_scripts[] = $script;
 		}
 		return $this;
 	}
