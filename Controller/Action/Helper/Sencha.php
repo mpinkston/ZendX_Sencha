@@ -593,7 +593,7 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 
 		$stack = (array) $path;
 		$scripts = array();
-		$types = array('controller', 'model', 'store', 'view');
+		$types = array('model', 'store', 'view', 'controller');
 		$currType = 'default';
 		
 		while (count($stack)){
