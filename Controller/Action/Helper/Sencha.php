@@ -28,11 +28,6 @@ require_once 'ZendX/Sencha/Direct/Api.php';
 /** Zend_Json */
 require_once 'Zend/Json.php';
 
-defined('PUBLIC_PATH')
-    || define('PUBLIC_PATH', realpath(APPLICATION_PATH . '/../public/'));
-
-defined('DS') || define('DS', DIRECTORY_SEPARATOR);
-
 /**
  * ZendX_Sencha_Controller_Action_Helper_Sencha class.
  * 
@@ -41,49 +36,12 @@ defined('DS') || define('DS', DIRECTORY_SEPARATOR);
 class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Action_Helper_Abstract
 {
 	/**
-	 * _senchaLoaded
-	 * 
-	 * (default value: false)
-	 * 
-	 * @var bool
-	 * @access protected
-	 * @static
-	 */
-	static protected $_senchaLoaded = false;
-
-	/**
 	 * _api
 	 *
 	 * @var mixed
 	 * @access protected
 	 */
 	protected $_api;
-
-	/**
-	 * _scriptPath
-	 * 
-	 * @var mixed
-	 * @access protected
-	 */
-	protected $_scriptPath = '/js';
-
-	/**
-	 * _scripts
-	 * An array of scripts to be loaded after the Ext libs
-	 * contains 
-	 * scriptName' => array(
-	 *		'defines' => array(
-	 			'Something.Something.Something'
-	 *		),
-	 *		'requires' => array(
-	 *	),
-	 *
-	 * (default value: array())
-	 * 
-	 * @var array
-	 * @access protected
-	 */
-	protected $_scripts = array();
 
 	/**
 	 * _view
@@ -94,133 +52,51 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	protected $_view;
 
 	/**
-	 * _defaultConfig
-	 * 
-	 * @var mixed
-	 * @access protected
-	 */
-	protected $_defaultConfig = array(
-		'library'		=> 'ext',
-		'version'		=> '3.3.1',
-		'theme'			=> 'default',
-		'debug'			=> false
-	);
-	
-	/**
-	 * _config
+	 * _scripts
 	 * 
 	 * (default value: array())
 	 * 
 	 * @var array
 	 * @access protected
 	 */
-	protected $_config = array();
-
-
-	/**
-	 * __construct function.
-	 * 
-	 * @access public
-	 * @param mixed $options. (default: null)
-	 * @return void
-	 */
-	public function __construct($options = null)
-	{
-		$this->_config = $this->_defaultConfig;
-        if ($options instanceof Zend_Config) {
-            $this->setConfig($options);
-        } elseif (is_array($options)) {
-            $this->setOptions($options);
-        }
-	}
+	protected $_scripts = array();
 
 	/**
-	 * setScriptPath function.
+	 * _senchaLoaded
+	 * 
+	 * (default value: false)
+	 * 
+	 * @var bool
+	 * @access private
+	 * @static
+	 */
+	private static $_senchaLoaded = false;
+
+	/**
+	 * _config
+	 * 
+	 * @var mixed
+	 * @access protected
+	 */
+	protected $_config = array(
+		'scriptPath'	=> 'js',
+		'library'		=> 'ext',
+		'version'		=> '4.0.1',
+		'theme'			=> 'default',
+		'debug'			=> false
+	);
+
+	/**
+	 * setOptions function.
 	 * 
 	 * @access public
-	 * @param mixed $path
+	 * @param mixed $options
 	 * @return void
 	 */
-	public function setScriptPath($path)
+	public function setOptions($options)
 	{
-		$path = trim($path, DS);
-		if (is_readable(PUBLIC_PATH . DS . $path)){
-			$this->_scriptPath = DS . $path;
-		} else {
-			require_once 'Zend/Controller/Action/Exception.php';
-			throw new Zend_Controller_Action_Exception(
-				'Specified script path is not readable or does not exist'
-			);
-		}
+		$this->_config = array_merge($this->_config, $options);
 		return $this;
-	}
-	
-	/**
-	 * getScriptPath function.
-	 * 
-	 * @access public
-	 * @return void
-	 */
-	public function getScriptPath()
-	{
-		return PUBLIC_PATH . DS . trim($this->_scriptPath, DS);
-	}
-
-    /**
-     * setOptions function.
-     * 
-     * @access public
-     * @param mixed array $options
-     * @return void
-     */
-    public function setOptions(array $options)
-    {
-		if (array_key_exists('loadDir', $options)) {
-			$dirs = (array)$options['loadDir'];
-			foreach ($dirs as $dir){
-				$this->appendFileDir($dir);
-			}
-		}
-		
-		if (array_key_exists('loadFile', $options)) {
-			$dirs = (array)$options['loadFile'];
-			foreach ($files as $file){
-				$this->appendFile($dir);
-			}
-		}
-		
-		if (array_key_exists('scriptPath', $options)) {
-			$this->setScriptPath($options['scriptPath']);
-		}
-
-		foreach ($this->_config as $key => &$value){
-			if (array_key_exists($key, $options)){
-				$value = $options[$key];
-			}
-		}
-		return $this;
-    }
-
-    /**
-     * setConfig function.
-     * 
-     * @access public
-     * @param mixed Zend_Config $config
-     * @return void
-     */
-    public function setConfig(Zend_Config $config)
-    {
-        return $this->setOptions($config->toArray());
-    }
-
-	/**
-	 * init function.
-	 *
-	 * @access public
-	 * @return void
-	 */
-	public function init()
-	{
 	}
 
 	/**
@@ -234,7 +110,6 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 		if ($this->_api === null){
 			$this->_api = new ZendX_Sencha_Direct_Api();
 		}
-		$this->_api->setNamespace($this->getNamespace());
 		return $this->_api;
 	}
 
@@ -287,23 +162,41 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	 */
 	public function postDispatch()
 	{
-		if (!self::$_senchaLoaded) {
-			$this->loadSencha($this->_config);
+		if (!self::$_senchaLoaded){
+			return;
 		}
-
+	
 		$api = $this->getApi();
 		$view = $this->getView();
 
-		if ($provider = $api->getProvider()){
-			$apiDesc = Zend_Json::encode($provider);
-			$script = "Ext.ns('{$provider['namespace']}');\n" .
-					  "{$provider['namespace']}.APIDesc = {$apiDesc};\n" .
-					  "Ext.Direct.addProvider({$provider['namespace']}.APIDesc);\n";
+		$providers = $api->getProviders();
+		if (count($providers)){		
+			$script = "Ext.namespace('" . implode("', '", array_keys($providers)) . "');\n\n";
+			foreach ($providers as $ns => $provider){
+				$apiDesc = Zend_Json::encode($provider);
+				$script .= "{$ns}.APIDesc = {$apiDesc};\n";
+				$script .= "Ext.Direct.addProvider({$ns}.APIDesc);\n\n";
+			}
 			$view->headScript()->appendScript($script);
 			$this->_patchRemotingProvider();
 		}
-
-		$this->_loadScripts();
+		foreach ($this->_scripts as $script){
+			$view->headScript()->appendFile($script);
+		}
+	}
+	
+	/**
+	 * addScript function.
+	 * 
+	 * @access public
+	 * @param mixed $script
+	 * @return void
+	 */
+	public function addScript($script)
+	{
+		$scriptPath = trim($this->_config['scriptPath'], DIRECTORY_SEPARATOR);
+		$this->_scripts[] = '/' . $scriptPath . '/' . $script;
+		return $this;
 	}
 
 	/**
@@ -318,13 +211,8 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	 */
 	private function _patchRemotingProvider()
 	{
-		$options = $this->_config;
-		
-		if (!$options['library'] == 'ext'){
-			return;
-		}
-		
-		$majorVersion = substr($options['version'], 0, 1);
+		$majorVersion = substr($this->_config['version'], 0, 1);
+	
 		$libraryPath = APPLICATION_PATH . '/../library/ZendX/Sencha/';
 		$fileName = "RemotingProviderPatch.ext{$majorVersion}x.js";
 		$filePath = $libraryPath . 'Scripts/' . $fileName;
@@ -332,57 +220,6 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 			$script = file_get_contents($filePath);
 			$this->getView()->headScript()->appendScript($script);
 		}
-	}
-
-	/**
-	 * getNamespace function.
-	 *
-	 * @access public
-	 * @return void
-	 */
-	public function getNamespace()
-	{
-		$request = $this->getRequest();
-		$moduleName = $request->getModuleName();
-		if (!$moduleName){
-			$moduleName = Zend_Controller_Front::getInstance()->getDefaultModule();
-		}
-		return ucfirst($moduleName);
-	}
-
-	/**
-	 * getLibraryPath function.
-	 * 
-	 * @access public
-	 * @return void
-	 */
-	public function getLibraryPath()
-	{
-		$options = $this->_config;
-	
-		$libraryPath = $this->_scriptPath . DS . 
-			$options['library'] . '-' . $options['version'];
-
-		if (!is_readable(PUBLIC_PATH . $libraryPath)) {
-			require_once 'Zend/Controller/Action/Exception.php';
-			throw new Zend_Controller_Action_Exception(
-				'Specified library path does not exist or is not readable (' .
-				PUBLIC_PATH . $libraryPath . ')'
-			);
-		}
-		return $libraryPath;
-	}
-
-	/**
-	 * loadExt function.
-	 * 
-	 * @access public
-	 * @param array $options. (default: array())
-	 * @return void
-	 */
-	public function loadExt($options = array())
-	{
-		return $this->loadSencha($options);
 	}
 
 	/**
@@ -394,37 +231,73 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	 */
 	public function loadSencha($options = array())
 	{
-		if (self::$_senchaLoaded){
+		if (self::$_senchaLoaded == true){
 			return $this;
 		}
+
 		$options = array_merge($this->_config, $options);
 		
 		$view = $this->getView();
 
-		$libraryPath = $this->getLibraryPath();
-		// css path is same for all libraries.
-		$cssPath = $libraryPath . '/resources/css';
-		$extension = $options['debug']?'-debug.js':'.js';
+		$scriptPath		= trim($options['scriptPath'], DIRECTORY_SEPARATOR);
+		$library		= $options['library'];
+		$version		= $options['version'];
+		$majorVersion	= substr($options['version'], 0, 1);
+		$libraryPath	= '/' . $scriptPath . '/' . $library . '-' . $version;
+		$cssPath		= $libraryPath . '/resources/css';
+		$debug			= $options['debug']?true:false;
+		$theme			= $options['theme']?$options['theme']:'default';
 
 		switch ($options['library']){
+			// The ExtJS library
 			case 'ext':
-				$view->headScript()->prependFile("{$libraryPath}/ext-all{$extension}");
-				$view->headLink()->appendStylesheet("{$cssPath}/ext-all.css");
-				if (substr($options['version'], 0, 1) < 4){
-					$view->headScript()->prependFile("{$libraryPath}/adapter/ext/ext-base{$extension}");
-					if ($options['theme'] !== 'default'){
-						$view->headLink()->appendStylesheet("{$cssPath}/xtheme-{$options['theme']}.css");
-					}
+				switch ($majorVersion) {
+
+					// Version 4 of the ExtJS library
+					case '4':
+						$script = $libraryPath . '/ext-all' . ($debug?'-debug.js':'.js');
+						$stylesheet = $cssPath . '/ext-all.css';
+
+						$view->headScript()->prependFile($script);
+						$view->headLink()->appendStylesheet($stylesheet);
+						break;
+
+					// Version 3 of the ExtJS library						
+					case '3':
+						$base = $libraryPath . '/adapter/ext/ext-base' . ($debug?'-debug.js':'.js');
+						$script = $libraryPath . '/ext-all' . ($debug?'-debug.js':'.js');
+						$stylesheet = $cssPath . '/ext-all.css';
+						
+						$view->headScript()->prependFile($script);
+						$view->headScript()->prependFile($base);
+						$view->headLink()->prependStylesheet($stylesheet);
+						
+						if ($theme !== 'default'){
+							$stylesheet = $cssPath . '/xtheme-' . $theme . '.css';
+							$view->headLink()->appendStylesheet($theme);
+						}
+						break;
+
+					// I haven't used these libs, but they don't support ExtDirect
+					case '2':
+					case '1':
+					default:
+						throw new Zend_Controller_Action_Exception('ZendX_Sencha can only be used with ExtJS 3+');
+						break;
 				}
 				break;
 				
+			// Ext Core library
 			case 'ext-core':
 				// no css for ext-core
-				$view->headScript()->prependFile("{$libraryPath}/ext-core{$extension}");
+				$script = $libraryPath . '/ext-core' . ($debug?'-debug.js':'.js');
+				$view->headScript()->prependFile($script);
 				break;
-				
+
+			// Sencha Touch
 			case 'sencha-touch':
-				$view->headScript()->prependFile("{$libraryPath}/sencha-touch{$extension}");
+				$script = $libraryPath . '/sencha-touch' . ($debug?'-debug.js':'.js');		
+				$view->headScript()->prependFile($script);
 				break;
 				
 			default:
@@ -433,179 +306,52 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 				break;
 		}
 		self::$_senchaLoaded = true;
+				
 		return $this;
 	}
 
 	/**
-	 * loadExample function.
-	 * Convenient access to the examples dir
+	 * loadApp function.
 	 * 
 	 * @access public
-	 * @param mixed $file
+	 * @param mixed $app
 	 * @return void
 	 */
-	public function loadExample($file)
+	public function loadApp($app)
 	{
-		$file = trim($file, DS);
-		$options = $this->_config;
-		$libraryPath = $this->getLibraryPath();
-		$filePath = $libraryPath . DS . 'examples' . DS . $file;
-		if (is_readable(PUBLIC_PATH . $filePath)){
-			if (substr($file, -2) == 'js') {
-				$this->getView()->headScript()->appendFile($filePath);
-			} else if (substr($file, -3) == 'css') {
-				$this->getView()->headLink()->appendStylesheet($filePath);
-			}
+		if (!self::$_senchaLoaded){
+			$this->loadSencha();
 		}
-		return $this;
-	}
-
-	/**
-	 * add function.
-	 *
-	 * @access public
-	 * @param mixed $config
-	 * @return Sencha_Controller_Action_Helper_Sencha
-	 */
-	public function add($config)
-	{
-		$api = $this->getApi();
-		$api->add($config);
-		return $this;
-	}
-
-	/**
-	 * load function.
-	 * 
-	 * @access public
-	 * @param mixed $config
-	 * @return void
-	 */
-	public function load($app)
-	{
-		$options = $this->_config;
-		$path = trim($app, DS);
-		
-		if (!is_readable(PUBLIC_PATH . DS . $this->_scriptPath . DS . $path)){
-			$ns = $this->getNamespace();
-			$path = $ns . DS . trim($app . DS);
-		}
-		
-		$fullPath = PUBLIC_PATH . $this->_scriptPath . DS . $path;
-		
-		if (!is_readable($fullPath)){
-			require_once 'Zend/Controller/Action/Exception.php';
-			throw new Zend_Controller_Action_Exception(
-				'Specified script path is not readable or does not exist'
-			);
-		}
-		
-		// Add the file and return if it's a single js file.
-		if (is_file($fullPath) && substr($path, -3) == '.js') {
-			return $this->addScript($path);
-		}
-
-		// It's probably a directory, and perhaps an entire mvc app
-		if (is_dir($fullPath)) {
-			$this->scanDir($path);
-		}
-		return $this;
-	}
 	
-	/**
-	 * _buildCatalog function.
-	 * scans each file in _scripts and tries to determine
-	 * what is defined in the file, and what each file requires.
-	 * 
-	 * @access protected
-	 * @return void
-	 */
-	protected function _buildCatalog()
-	{
-		foreach($this->_scripts as $script => &$config){
-			$fc = file_get_contents(PUBLIC_PATH . $this->_scriptPath . DS . $script);
-			// Find Requirements
-			preg_match_all('/Ext.require\((.*?)\)/s', $fc, $match);
-			foreach ($match[1] as $r){
-				$r = preg_replace('/[\r\n\s\t\[\]]/','', $r);
-				foreach(explode(',', $r) as $req){
-					$config['requires'][] = $req;
-				}
-			}
-			// Find Defines
-			// (an array since aliases can be defined too even though I'm not including those yet)
-			preg_match_all('/Ext.define\((.*?),(:?.*)/s', $fc, $match);
-			foreach ($match[1] as $p){
-				$config['provides'][] = $p;
-			}
-		}
-		return $this;
-	}
+		$view		= $this->getView();
+		
+		$publicPath = $_SERVER['DOCUMENT_ROOT'];
+		$scriptPath	= '/' . trim($this->_config['scriptPath'], DIRECTORY_SEPARATOR);
+		$appPath	= trim($app, DIRECTORY_SEPARATOR);
+		$fullPath	= $publicPath . $scriptPath . '/' . $app;
 
-	/**
-	 * _findProvides function.
-	 * 
-	 * @access protected
-	 * @param mixed $req
-	 * @return void
-	 */
-	protected function _findProvides($req)
-	{
-		foreach ($this->_scripts as $path => $config){
-			if (isset($config['provides']) && in_array($req, $config['provides'])){
-				return $path;
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * _loadScripts function.
-	 * 
-	 * @access protected
-	 * @return void
-	 */
-	protected function _loadScripts()
-	{
-		foreach ($this->_scripts as $script){
-			$this->getView()->headScript()->appendFile($this->_scriptPath . DS . $script);
-		}
-		return $this;
-	}
-
-	/**
-	 * scanDir function.
-	 * Builds an array of .js files anywhere in the 
-	 * 
-	 * @access public
-	 * @param mixed $path
-	 * @return void
-	 */
-	public function scanDir($path)
-	{
-		$path = trim($path, DS);
-		if (!is_dir(PUBLIC_PATH . $this->_scriptPath . DS . $path)){
+		if (!is_dir($fullPath)){
 			require_once 'Zend/Controller/Action/Exception.php';
 			throw new Zend_Controller_Action_Exception(
 				'Specified script path is not readable or does not exist'
 			);
 		}
 
-		$stack = (array) $path;
+		$stack = (array) $appPath;
 		$scripts = array();
 		$types = array('model', 'store', 'view', 'controller');
 		$currType = 'default';
 		
 		while (count($stack)){
 			$currDir = array_pop($stack);
-			if ($currFiles = scandir(PUBLIC_PATH . $this->_scriptPath . DS . $currDir)) {
+			if ($currFiles = scandir($publicPath . $scriptPath . '/' . $currDir)) {
 				foreach ($currFiles as $file){
-					$relPath = $currDir . DS . $file;
-					$fullPath = PUBLIC_PATH . $this->_scriptPath . DS . $relPath;
+					$relPath = $currDir . '/' . $file;
+					$fullPath = $publicPath . $scriptPath . '/' . $relPath;
 					if (is_dir($fullPath) && $file != '.' && $file != '..') {
 						array_push($stack, $relPath);
 					} else if (is_file($fullPath) && substr($file, -3) == '.js') {
-						$parts = explode(DS, $relPath);
+						$parts = explode('/', $relPath);
 						$currType = 'default';
 						foreach ($parts as $part){
 							if (in_array($part, $types)){
@@ -634,37 +380,53 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	}
 
 	/**
-	 * reset function.
-	 * Clears out the current api namespaces
-	 * if allNamespaces is set to true, clears all
-	 * api namespaces.
-	 *
+	 * addController function.
+	 * 
 	 * @access public
-	 * @param bool $allNamespaces. (default: false)
+	 * @param mixed $controller
+	 * @param mixed $module. (default: null)
 	 * @return void
 	 */
-	public function reset($allNamespaces=false)
+	public function addController($controller, $module=null)
 	{
 		$api = $this->getApi();
-		$api->reset($allNamespaces);
+		$module = $module?$module:$this->getRequest()->getModuleName();
+
+		if ($controller instanceof Zend_Controller_Action){
+			$api->add($controller, $module);
+			return $this;
+		} else if (is_string($controller)) {
+			$front = $this->getFrontController();
+			$dispatcher = $front->getDispatcher();
+	
+			$request = clone $this->getRequest();
+			$request->setControllerName($controller);
+			$request->setModuleName($module);
+			$className = $dispatcher->getControllerClass($request);
+			$finalClass = $dispatcher->loadClass($className);
+	
+			$class = new $finalClass($this->getRequest(), $this->getResponse());
+			$api->add($class, $module);
+			return $this;
+		} else {
+			require_once 'ZendX/Sencha/Direct/Exception.php';
+			throw new ZendX_Sencha_Direct_Exception('Invalid controller passed to ' . __METHOD__);
+		}
+	}
+	
+	/**
+	 * reset function.
+	 * 
+	 * @access public
+	 * @param mixed $namespace. (default: null)
+	 * @return void
+	 */
+	public function reset($namespace=null)
+	{
+		$this->getApi()->reset($namespace);
 		return $this;
 	}
 		
-	/**
-	 * addScript function.
-	 * 
-	 * @access public
-	 * @param mixed $script
-	 * @return void
-	 */
-	public function addScript($script)
-	{
-		if (!array_key_exists($script, $this->_scripts)) {
-			$this->_scripts[] = $script;
-		}
-		return $this;
-	}
-
 	/**
 	 * direct function.
 	 *
@@ -672,13 +434,33 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	 * @param mixed $config
 	 * @return void
 	 */
-	public function direct($config=null)
+	public function direct($config=array())
 	{
-		$this->add($this->getActionController());
-
-		if ($config !== null){
-			$this->load($config);
+		if (!array_key_exists('resetApi', $config) || $config['resetApi'] == true){
+			$this->reset();
 		}
+
+		$this->addController($this->getActionController());
+
+		if (array_key_exists('controllers', $config)){
+			$controllers = (array) $config['controllers'];
+			foreach ($controllers as $controller) {
+				call_user_func_array(array($this, 'addController'), (array) $controller);
+			}
+		}
+
+		if (array_key_exists('scripts', $config)){
+			$scripts = (array) $config['scripts'];
+			foreach ($scripts as $script) {
+				$this->addScript(ltrim($script, DIRECTORY_SEPARATOR));
+			}
+		}
+
+		if (array_key_exists('app', $config)){
+			$app = (string) $config['app'];
+			$this->loadApp($app);
+		}
+
 		return $this;
 	}
 }

@@ -31,6 +31,9 @@ class ZendX_Sencha_Direct_Api
 	// will be stored
 	protected static $_sessionNamespace = 'ExtDirect_NS';
 
+	// The default namespace to use for rpc functions
+	protected static $_defaultNamespace = 'App';
+
 	// The URL to which the rpc client should make requests
 	protected static $_routerUrl		= '/index.php';
 
@@ -55,18 +58,6 @@ class ZendX_Sencha_Direct_Api
 	
 	// This is a standard docblock attribute.	
 	protected static $_paramAttribute	= 'param';
-	
-	/**
-	 * getNsSuffix function.
-	 * 
-	 * @access public
-	 * @static
-	 * @return void
-	 */
-	public static function getNsSuffix()
-	{
-		return self::$_nsSuffix;
-	}
 
 	/**
 	 * _session
@@ -76,16 +67,6 @@ class ZendX_Sencha_Direct_Api
 	 * @static
 	 */
 	private static $_session;
-
-	/**
-	 * _namespace
-	 * 
-	 * (default value: 'Default')
-	 * 
-	 * @var string
-	 * @access private
-	 */
-	private $_namespace = 'Default';
 	
 	/**
 	 * __construct function.
@@ -100,65 +81,74 @@ class ZendX_Sencha_Direct_Api
             self::$_session = new Zend_Session_Namespace(self::$_sessionNamespace);
         }
 	}
-
-	/**
-	 * getNamespace function.
-	 * 
-	 * @access public
-	 * @return void
-	 */
-	public function getNamespace()
-	{
-		return $this->_namespace;
-	}
-
-	/**
-	 * setNamespace function.
-	 * 
-	 * @access public
-	 * @param mixed $ns
-	 * @return void
-	 */
-	public function setNamespace($ns)
-	{
-		$this->_namespace = $ns;
-	}
 	
 	/**
 	 * reset function.
 	 * 
 	 * @access public
-	 * @param bool $allNamespaces. (default: false)
+	 * @param mixed $namespace. (default: null)
 	 * @return void
 	 */
-	public function reset($allNamespaces=false)
+	public function reset($namespace=null)
 	{
-		if ($allNamespaces===true){
-			self::$_session = null;
+		if ($namespace !== null){
+			unset(self::$_session->$namespace);
 		} else {
-			$ns = $this->getNamespace();
-			self::$_session->$ns = null;
+			self::$_session->unsetAll();
 		}
+	}
+	
+	/**
+	 * getNsSuffix function.
+	 * 
+	 * @access public
+	 * @static
+	 * @return void
+	 */
+	public static function getNsSuffix()
+	{
+		return self::$_nsSuffix;
+	}
+
+	/**
+	 * getNamespaces function.
+	 * 
+	 * @access public
+	 * @return void
+	 */
+	public function getProviders()
+	{
+		if (!self::$_session){
+			return array();
+		}
+		$iterator = self::$_session->getIterator();
+		$providers = array();
+		foreach ($iterator as $ns => $provider) {
+			$providers[$ns . self::$_nsSuffix] = $this->getProvider($ns);
+		}
+		return $providers;
 	}
 
 	/**
 	 * getProvider function.
 	 * 
 	 * @access public
+	 * @param mixed $namespace. (default: null)
 	 * @return void
 	 */
-	public function getProvider()
+	public function getProvider($namespace=null)
 	{
-		$ns = $this->getNamespace();
-		$provider = array(
-			'type'		=> self::$_providerType,
-			'url'		=> self::$_routerUrl,
-			'namespace'	=> $ns . self::$_nsSuffix,
-		);
+		$ns = $this->_formatNamespace($namespace);
 
 		if (!isset(self::$_session->$ns)){
 			return null;
 		}
+
+		$provider = array(
+			'type'		=> self::$_providerType,
+			'url'		=> self::$_routerUrl,
+			'namespace'	=> $ns . self::$_nsSuffix
+		);
 
 		$classes = self::$_session->$ns;
 		foreach ($classes as $class => $config) {
@@ -174,33 +164,19 @@ class ZendX_Sencha_Direct_Api
 	}
 
 	/**
-	 * getClass function.
-	 * 
-	 * @access public
-	 * @param mixed $className
-	 * @return void
-	 */
-	public function getClass($className)
-	{
-		$ns = $this->getNamespace();
-		$api = self::$_session->$ns;
-		if (isset($api[$className])){
-			return $api[$className];
-		}
-		return null;
-	}
-
-	/**
 	 * _cached function.
 	 * 
 	 * @access private
 	 * @param mixed $className
 	 * @return void
 	 */
-	private function _cached($className)
+	private function _cached($className, $namespace=null)
 	{
-		$ns = $this->getNamespace();
-		$classes = self::$_session->$ns;
+		if (!isset(self::$_session->$namespace)){
+			return false;
+		}
+
+		$classes = self::$_session->$namespace;
 		if (is_array($classes)){
 			foreach ($classes as $class => $config) {
 				if (array_key_exists('className', (array) $config) && $config['className'] == $className){
@@ -221,7 +197,7 @@ class ZendX_Sencha_Direct_Api
 	}
 
 	/**
-	 * _getParents function.
+	 * _getAncestors function.
 	 * 
 	 * @access private
 	 * @param mixed $rc
@@ -229,7 +205,7 @@ class ZendX_Sencha_Direct_Api
 	 * @param mixed $mtime
 	 * @return void
 	 */
-	private function _getParents($rc, &$mtime, &$relatedFiles=array()){
+	private function _getAncestors($rc, &$mtime, &$relatedFiles=array()){
 		$tdf = $rc->getDeclaringFile();
 		if ($p = $rc->getParentClass()){
 			$f = $p->getDeclaringFile();
@@ -239,52 +215,63 @@ class ZendX_Sencha_Direct_Api
 			if ($filemtime > $mtime){
 				$mtime = $filemtime;
 			}
-			$this->_getParents($p, $mtime, $relatedFiles);
+			$this->_getAncestors($p, $mtime, $relatedFiles);
 		}
 		return $relatedFiles;
 	}
 
 	/**
-	 * add function.
-	 * Add one or more remotable classes.
+	 * _formatNamespace function.
 	 * 
-	 * @access public
-	 * @param mixed $config
+	 * @access private
+	 * @param mixed $namespace. (default: null)
 	 * @return void
 	 */
-	public function add($config)
+	private function _formatNamespace($namespace=null)
 	{
-		if (is_array($config)){
-			foreach ($config as $c){
-				if (is_string($c) || is_object($c)){
-					$this->add($c);
-				}
-			}
-			return $this;
-		}
-	
-		if (is_object($config)){
-			$className = get_class($config);
-		} else if (class_exists($config)) {
-			$className = $config;
-			$config = new $config();
+		$ns = $namespace?$namespace:self::$_defaultNamespace;
+		$ns = preg_replace('/[^a-z]/i', '', $ns);
+		return ucfirst(strtolower($ns));
+	}
+
+	/**
+	 * add function.
+	 * add a remotable class.
+	 * $class must be a class instance or a string 
+	 * representing an instantiable class. 
+	 *
+	 * @access public
+	 * @param mixed $config
+	 * @param mixed $namespace. (default: null)
+	 * @return void
+	 */
+	public function add($class, $namespace=null)
+	{
+		$ns = $this->_formatNamespace($namespace);
+
+		if (is_string($class) && class_exists($class)){
+			$className = $class;
+			$instance = new $class();
+		} else if (is_object($class)) {
+			$className = get_class($class);
+			$instance = $class;
 		} else {
-			throw new Sencha_Direct_Exception('Invalid config sent to ' . __METHOD__);
+			throw new Sencha_Direct_Exception('Invalid argument passed to ' . __METHOD__);
 		}
 
-		if ($this->_cached($className)){
+		if ($this->_cached($className, $ns)){
 			return $this;
 		}
 
 		// Analyze the class;
-		$rc = new Zend_Reflection_Class($config);
+		$rc = new Zend_Reflection_Class($instance);
 		$cFile = $rc->getDeclaringFile();
 		$cDoc  = $rc->getDocBlock();
 
 		$cTag = $cDoc->getTag(self::$_nameAttribute);
 		if ($cTag){
 			$cName = trim($cTag->getDescription());
-		} else if ($config instanceof Zend_Controller_Action) {
+		} else if ($instance instanceof Zend_Controller_Action) {
 			$cName = preg_replace('/Controller$/', '', array_pop(explode('_', $rc->name)));
 		} else {
 			$cName = array_pop(explode('_', $rc->name));
@@ -297,7 +284,7 @@ class ZendX_Sencha_Direct_Api
 		$classConfig = array(
 			'className'	=> $rc->name,
 			'fullPath'	=> $fileName,
-			'relFiles'	=> $this->_getParents($rc, $mtime),
+			'relFiles'	=> $this->_getAncestors($rc, $mtime),
 			'mtime'		=> $mtime,
 			'methods'	=> array()
 		);
@@ -307,7 +294,13 @@ class ZendX_Sencha_Direct_Api
 			if (!$mDoc->hasTag('remotable')){ continue; }
 			$mTag = $mDoc->getTag(self::$_nameAttribute);
 			$pTags = $mDoc->getTags(self::$_paramAttribute);
-			$mName = $mTag?trim($mTag->getDescription()):$cMethod->name;
+
+			if ($mTag){
+				$mName = trim($mTag->getDescription());
+			} else {
+				// Strip 'Action' from the end of method names by default.
+				$mName = preg_replace('/Action$/', '', $cMethod->name);
+			}
 
 			$classConfig['methods'][$mName] = array(
 				'methodName'	=> $cMethod->name,
@@ -316,8 +309,6 @@ class ZendX_Sencha_Direct_Api
 			);
 		}
 		
-		$ns = $this->getNamespace();
-
 		$tmpArr = array();
 		if (isset(self::$_session->$ns)){
 			$tmpArr = self::$_session->$ns;

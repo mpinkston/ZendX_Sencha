@@ -224,6 +224,9 @@ class ZendX_Sencha_Direct_Response extends Zend_Controller_Response_Http
 	 * This code was swiped from: http://recursive-design.com/blog/2008/03/11/format-json-with-php/
 	 * thanks!
 	 *
+	 * This is just to make debugging easier for now. I feel I'll eventually
+	 * have to move it someplace more appropriate.
+	 *
 	 * @author Recursive Design (http://recursive-design.com/)
 	 * @access public
 	 * @param mixed $json
