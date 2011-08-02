@@ -56,7 +56,12 @@ class ZendX_Sencha_Factory
 		// Querying
 		if (array_key_exists('fields', $options) && array_key_exists('query', $options)) {
 			$queryExpr = array();
-			$fields = Zend_Json::decode($options['fields']);
+			if (is_array($options['fields'])){
+				$fields = $options['fields'];
+			} else if (is_scalar($options['fields'])) {
+				$fields = Zend_Json::decode($options['fields']);
+			}
+
 			if (is_array($fields)){
 				foreach ($fields as $field){
 					if (in_array($field, $table->info('cols'))){
@@ -71,59 +76,61 @@ class ZendX_Sencha_Factory
 		
 		// Filtering
 		if (array_key_exists('filter', $options)){
-			$filters = Zend_Json::decode($options['filter']);
-			foreach ($filters as $filter) {
-				if (!isset($filter['value']) ||
-					!isset($filter['field']) ||
-					!isset($filter['type']) ||
-					!in_array($filter['field'], $table->info('cols'))){
-					continue;
+			$queryExpr = array();
+			if (is_array($options['filter'])){
+				foreach ($options['filter'] as $filter){				
+					if (!array_key_exists('property', $filter) || 
+						!array_key_exists('value', $filter) ||
+						!in_array($filter['property'], $table->info('cols'))){
+						continue;
+					}
+					
+					$exactMatch = (isset($filter['exactMatch'])&&$filter['exactMatch']===true)?true:false;
+					$anyMatch = (isset($filter['anyMatch'])&&$filter['anyMatch']===true)?true:false;
+					$caseSensitive = (isset($filter['caseSensitive'])&&$filter['caseSensitive']===true)?true:false;
+					
+					if ($anyMatch === true){
+						$queryExpr[] = $table->getAdapter()->quoteInto(
+							"{$filter['property']} REGEXP" . ($caseSensitive?" BINARY":"") . " ?", 
+							$filter['value']
+						);
+					} else {
+						$queryExpr[] = $table->getAdapter()->quoteInto(
+							"{$filter['property']} REGEXP" . ($caseSensitive?" BINARY":"") . " ?", 
+							'^' . $filter['value'] . ($exactMatch?'$':'')
+						);
+					}
 				}
-			
-				switch ($filter['type']) {
-					case 'boolean':
-						// TODO..
-						break;
-						
-					case 'date':
-						// TODO..
-						break;
-						
-					case 'list':
-						$values = (array) $filter['value'];
-						$queryExpr = array();
-						foreach ($values as $value){
-							$queryExpr[] = $table->getAdapter()->quoteInto("{$filter['field']} = ?", $value);
-						}
-						if (count($queryExpr) > 0){
-							$select->where(implode(' OR ', $queryExpr));
-						}
-                        break;
-						
-					case 'numeric':
-						// TODO..
-						break;
-						
-					case 'string':
-					default:
-						// TODO..
-						break;
-				}
+			}
+			if (count($queryExpr) > 0){
+				$select->where(implode(' AND ', $queryExpr));
 			}
 		}
 		
 		// Sorting
-		if (array_key_exists('sort', $options) && in_array($options['sort'], $table->info('cols'))){
-			$sort	= $options['sort'];
-			$dir	= (isset($options['dir'])&&strtolower($options['dir']) == 'desc')?'DESC':'ASC';
-			$select->order("{$sort} {$dir}");
+		if (array_key_exists('sort', $options)){
+			if (is_array($options['sort'])) {
+				$sortConfig = array();
+				foreach ($options['sort'] as $sc){
+					if (array_key_exists('property', $sc) && in_array($sc['property'], $table->info('cols'))){					
+						$sort = $sc['property'];
+						$dir = (isset($sc['direction'])&&strtolower($sc['direction'])=='desc')?'DESC':'ASC';
+						$sortConfig[] = "{$sort} {$dir}";
+					}
+				}
+				$select->order(implode(', ', $sortConfig));
+			} else if (is_scalar($options['sort']) && in_array($options['sort'], $table->info('cols'))){		
+				$sort	= $options['sort'];
+				$dir	= (isset($options['dir'])&&strtolower($options['dir']) == 'desc')?'DESC':'ASC';
+				$select->order("{$sort} {$dir}");
+			}
 		}
 
 		// Create the paginator
 		$adapter = new Zend_Paginator_Adapter_DbTableSelect($select);
 		$paginator = new Zend_Paginator($adapter);
 		$paginator->setDefaultItemCountPerPage(100);
-		
+
 		if (array_key_exists('limit', $options)){
 			$paginator->setItemCountPerPage($options['limit']);
 		}

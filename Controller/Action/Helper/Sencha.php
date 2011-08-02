@@ -297,7 +297,9 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 			// Sencha Touch
 			case 'sencha-touch':
 				$script = $libraryPath . '/sencha-touch' . ($debug?'-debug.js':'.js');		
+				$stylesheet = $cssPath . '/sencha-touch.css';
 				$view->headScript()->prependFile($script);
+				$view->headLink()->appendStylesheet($stylesheet);
 				break;
 				
 			default:
@@ -389,6 +391,11 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	 */
 	public function addController($controller, $module=null)
 	{
+		if ('ext' != $this->_config['library']){
+			// Only ext has Ext.Direct right now..
+			return true;
+		}
+	
 		$api = $this->getApi();
 		$module = $module?$module:$this->getRequest()->getModuleName();
 
@@ -440,6 +447,7 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 			$this->reset();
 		}
 
+		$this->setOptions($config);
 		$this->addController($this->getActionController());
 
 		if (array_key_exists('controllers', $config)){

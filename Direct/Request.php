@@ -181,6 +181,38 @@ class ZendX_Sencha_Direct_Request extends Zend_Controller_Request_Http
 			}
 		}
 	}
+	
+    /**
+     * getPost function.
+     * 
+     * @access public
+     * @param mixed $key. (default: null)
+     * @param mixed $default. (default: null)
+     * @return void
+     */
+    public function getPost($key = null, $default = null)
+	{
+	    $pairs = explode("&", file_get_contents("php://input"));
+	    $vars = array();
+	    foreach ($pairs as $pair) {
+	        $nv = explode("=", $pair);
+	        $name = urldecode($nv[0]);
+	        $value = urldecode($nv[1]);
+	        if (isset($vars[$name])){
+	        	if (!is_array($vars[$name])){
+	        		$vars[$name] = (array) $vars[$name];
+	        	}
+	        	$vars[$name][] = $value;
+	        } else {
+		        $vars[$name] = $value;
+	        }
+	    }
+	    
+	    if ($key !== null){
+	    	return isset($vars[$key])?$vars[$key]:$default;
+	    }
+	    return $vars;
+	}
 
     /**
      * getTid function.
