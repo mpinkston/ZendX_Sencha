@@ -52,7 +52,7 @@ class ZendX_Sencha_Factory
 	public static function getStore(Zend_Db_Table_Abstract $table, $options=array())
 	{
 		$select = $table->select();
-		
+
 		// Querying
 		if (array_key_exists('fields', $options) && array_key_exists('query', $options)) {
 			$queryExpr = array();
@@ -77,6 +77,11 @@ class ZendX_Sencha_Factory
 		// Filtering
 		if (array_key_exists('filter', $options)){
 			$queryExpr = array();
+			$options['filter'] = stripslashes($options['filter']);
+			try {
+				$options['filter'] = Zend_Json::decode($options['filter']);
+			} catch (Exception $e){}
+			
 			if (is_array($options['filter'])){
 				foreach ($options['filter'] as $filter){				
 					if (!array_key_exists('property', $filter) || 
@@ -106,9 +111,14 @@ class ZendX_Sencha_Factory
 				$select->where(implode(' AND ', $queryExpr));
 			}
 		}
-		
+
 		// Sorting
-		if (array_key_exists('sort', $options)){
+		if (array_key_exists('sort', $options)) {
+			$options['sort'] = stripslashes($options['sort']);
+			try {
+				$options['sort'] = Zend_Json::decode($options['sort']);
+			} catch (Exception $e){}
+
 			if (is_array($options['sort'])) {
 				$sortConfig = array();
 				foreach ($options['sort'] as $sc){

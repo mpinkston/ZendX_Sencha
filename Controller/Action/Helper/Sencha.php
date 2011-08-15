@@ -367,6 +367,11 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 			}
 		}
 
+		if ($this->_config['library'] == "sencha-touch"){
+			foreach ($scripts['default'] as $script){
+				$this->addScript($script);
+			}
+		}
 		foreach ($types as $type){
 			if (array_key_exists($type, $scripts) && is_array($scripts[$type])){
 				foreach ($scripts[$type] as $script){
@@ -374,10 +379,11 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 				}
 			}
 		}
-		foreach ($scripts['default'] as $script){
-			$this->addScript($script);
+		if ($this->_config['library'] != "sencha-touch"){
+			foreach ($scripts['default'] as $script){
+				$this->addScript($script);
+			}
 		}
-		
 		return $this;
 	}
 
