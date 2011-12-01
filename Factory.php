@@ -114,10 +114,13 @@ class ZendX_Sencha_Factory
 
 		// Sorting
 		if (array_key_exists('sort', $options)) {
-			$options['sort'] = stripslashes($options['sort']);
-			try {
-				$options['sort'] = Zend_Json::decode($options['sort']);
-			} catch (Exception $e){}
+		
+			if (is_scalar($options['sort'])){
+				$options['sort'] = stripslashes($options['sort']);
+				try {
+					$options['sort'] = Zend_Json::decode($options['sort']);
+				} catch (Exception $e){}
+			}
 
 			if (is_array($options['sort'])) {
 				$sortConfig = array();
