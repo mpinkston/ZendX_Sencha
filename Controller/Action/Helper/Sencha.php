@@ -297,7 +297,7 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 			// Sencha Touch
 			case 'sencha-touch':
 				$script = $libraryPath . '/sencha-touch' . ($debug?'-debug.js':'.js');		
-				$stylesheet = $cssPath . '/sencha-touch.css';
+//				$stylesheet = $cssPath . '/sencha-touch.css';
 				$view->headScript()->prependFile($script);
 				$view->headLink()->appendStylesheet($stylesheet);
 				break;
@@ -449,6 +449,9 @@ class ZendX_Sencha_Controller_Action_Helper_Sencha extends Zend_Controller_Actio
 	 */
 	public function direct($config=array())
 	{
+		// prevent the library from loading
+		self::$_senchaLoaded = true;
+	
 		if (!array_key_exists('resetApi', $config) || $config['resetApi'] == true){
 			$this->reset();
 		}
